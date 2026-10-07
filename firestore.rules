@@ -4,7 +4,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function userDoc() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
-    function roleIs(name) { return signedIn() && userDoc().data.role == name && userDoc().data.verified == true; }
+    function roleIs(name) {
+      return signedIn()
+        && userDoc().data.role == name
+        && userDoc().data.verified == true;
+    }
     function sameUser(uid) { return signedIn() && request.auth.uid == uid; }
 
     function consentPath(patientId, granteeId) {
@@ -44,6 +48,14 @@ service cloud.firestore {
         allow create: if sameUser(patientId) || (signedIn() && hasConsent(patientId, 'patient.observations.write'));
         allow update, delete: if false;
       }
+
+      match /deviceRaw/{observationId} {
+        allow read: if sameUser(patientId);
+        allow create: if sameUser(patientId)
+          && request.resource.data.synthetic == false
+          && request.resource.data.provenance == 'wearable';
+        allow update, delete: if false;
+      }
     }
 
     match /consents/{consentId} {
@@ -73,18 +85,55 @@ service cloud.firestore {
 
     match /pharmacyInventory/{itemId} {
       allow read: if signedIn();
-      allow write: if roleIs('pharmacist');
+      allow write: if false;
     }
 
     match /dispensingEvents/{eventId} {
       allow read: if signedIn() &&
-        (resource.data.pharmacistId == request.auth.uid || roleIs('clinician'));
+        (resource.data.patientId == request.auth.uid ||
+         resource.data.pharmacistId == request.auth.uid ||
+         roleIs('clinician'));
+      allow write: if false;
+    }
+
+    match /labResults/{resultId} {
+      allow read: if signedIn() &&
+        (resource.data.patientId == request.auth.uid ||
+         hasConsent(resource.data.patientId, 'patient.timeline.read'));
+      allow write: if false;
+    }
+
+    match /emergencyProfiles/{patientId} {
+      allow read, create, update: if sameUser(patientId);
+      allow delete: if false;
+    }
+
+    match /caregiverGrants/{grantId} {
+      allow read: if signedIn() &&
+        (resource.data.patientId == request.auth.uid || resource.data.caregiverId == request.auth.uid);
+      allow create, update: if signedIn() && request.resource.data.patientId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /carePrograms/{programId} {
+      allow read: if signedIn() &&
+        (resource.data.patientId == request.auth.uid ||
+         hasConsent(resource.data.patientId, 'patient.timeline.read'));
+      allow write: if false;
+    }
+
+    match /insuranceCoverage/{coverageId} {
+      allow read: if signedIn() && resource.data.patientId == request.auth.uid;
       allow write: if false;
     }
 
     match /organizations/{orgId} {
       allow read: if signedIn();
       allow write: if false;
+    }
+
+    match /analyticsAggregates/{metricId} {
+      allow read, write: if false;
     }
 
     match /auditEvents/{eventId} {
