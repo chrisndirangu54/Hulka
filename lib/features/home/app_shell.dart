@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../services/notification_service.dart';
 import '../ai/ai_copilot_screen.dart';
 import '../analytics/analytics_screen.dart';
 import '../clinical/clinician_screen.dart';
@@ -28,6 +29,12 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService().initializeForCurrentUser();
+  }
 
   List<_Destination> destinationsFor(String role) {
     final base = <_Destination>[
@@ -58,11 +65,11 @@ class _AppShellState extends State<AppShell> {
       builder: (context, snap) {
         final role = snap.data?.data()?['role'] as String? ?? 'patient';
         final destinations = destinationsFor(role);
-        if (index >= destinations.length) index = 0;
+        final selected = index < destinations.length ? index : 0;
 
         return Scaffold(
           appBar: AppBar(
-            title: Text('Hulka • ${destinations[index].label}'),
+            title: Text('Hulka • ${destinations[selected].label}'),
             actions: [
               IconButton(
                 onPressed: () => FirebaseAuth.instance.signOut(),
@@ -84,7 +91,7 @@ class _AppShellState extends State<AppShell> {
                         const Divider(),
                         for (var i = 0; i < destinations.length; i++)
                           ListTile(
-                            selected: i == index,
+                            selected: i == selected,
                             leading: Icon(destinations[i].icon),
                             title: Text(destinations[i].label),
                             onTap: () {
@@ -100,12 +107,12 @@ class _AppShellState extends State<AppShell> {
           body: LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth < 760) {
-                return destinations[index].page;
+                return destinations[selected].page;
               }
               return Row(
                 children: [
                   NavigationRail(
-                    selectedIndex: index,
+                    selectedIndex: selected,
                     onDestinationSelected: (value) => setState(() => index = value),
                     labelType: NavigationRailLabelType.all,
                     destinations: destinations
@@ -113,7 +120,7 @@ class _AppShellState extends State<AppShell> {
                         .toList(),
                   ),
                   const VerticalDivider(width: 1),
-                  Expanded(child: destinations[index].page),
+                  Expanded(child: destinations[selected].page),
                 ],
               );
             },

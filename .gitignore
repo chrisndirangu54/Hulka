@@ -1,0 +1,31 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+.pub/
+build/
+coverage/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Firebase
+.firebase/
+firebase-debug.log
+.firebaserc.local
+
+# Secrets
+.env
+.env.*
+!.env.example
+**/google-services.json
+**/GoogleService-Info.plist
+functions/.runtimeconfig.json
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Node
+functions/node_modules/
+functions/lib/
