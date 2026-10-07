@@ -6,10 +6,7 @@ class HulkaFunctions {
 
   final FirebaseFunctions _functions;
 
-  Future<Map<String, dynamic>> _call(
-    String name,
-    Map<String, Object?> payload,
-  ) async {
+  Future<Map<String, dynamic>> _call(String name, Map<String, Object?> payload) async {
     final r = await _functions.httpsCallable(name).call(payload);
     return Map<String, dynamic>.from(r.data as Map);
   }
@@ -56,4 +53,7 @@ class HulkaFunctions {
 
   Future<Map<String, dynamic>> getPopulationMetric(String metric) =>
       _call('getPopulationMetric', {'metric': metric});
+
+  Future<Map<String, dynamic>> evaluatePreventiveCare() =>
+      _call('evaluatePreventiveCare', const {});
 }
