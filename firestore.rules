@@ -27,7 +27,17 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read, create, update: if sameUser(uid);
+      allow read: if sameUser(uid);
+      allow create: if sameUser(uid)
+        && request.resource.data.role == 'patient'
+        && request.resource.data.verified == true;
+      allow update: if sameUser(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName',
+          'email',
+          'fcmTokens',
+          'notificationsUpdatedAt'
+        ]);
       allow delete: if false;
     }
 
