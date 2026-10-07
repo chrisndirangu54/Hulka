@@ -705,3 +705,115 @@ export const evaluatePreventiveCare = onCall(async (request) => {
   });
   return { configured: true, generated };
 });
+
+
+export const createPharmacyOrder = onCall(async (request) => {
+  const uid = requireAuth(request.auth);
+  const d = request.data ?? {};
+  const prescriptionId = String(d.prescriptionId ?? "");
+  const inventoryId = String(d.inventoryId ?? "");
+  const requestedQuantity = Number(d.quantity ?? 0);
+
+  if (!prescriptionId || !inventoryId || !Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
+    throw new HttpsError(
+      "invalid-argument",
+      "prescriptionId, inventoryId and a positive quantity are required"
+    );
+  }
+
+  const prescriptionRef = db.collection("prescriptions").doc(prescriptionId);
+  const inventoryRef = db.collection("pharmacyInventory").doc(inventoryId);
+  const orderRef = db.collection("pharmacyOrders").doc();
+
+  await db.runTransaction(async (tx) => {
+    const [prescriptionSnap, inventorySnap] = await Promise.all([
+      tx.get(prescriptionRef),
+      tx.get(inventoryRef),
+    ]);
+
+    if (!prescriptionSnap.exists) {
+      throw new HttpsError("not-found", "Prescription not found");
+    }
+    if (!inventorySnap.exists) {
+      throw new HttpsError("not-found", "Pharmacy inventory item not found");
+    }
+
+    const prescription = prescriptionSnap.data() ?? {};
+    const inventory = inventorySnap.data() ?? {};
+
+    if (prescription.patientId !== uid) {
+      throw new HttpsError("permission-denied", "This prescription does not belong to the current patient");
+    }
+    if (prescription.status !== "active") {
+      throw new HttpsError("failed-precondition", "Prescription is not active");
+    }
+
+    const sameGeneric =
+      String(prescription.genericName ?? "").trim().toLowerCase() ===
+      String(inventory.genericName ?? "").trim().toLowerCase();
+    const sameStrength =
+      String(prescription.strength ?? "").trim().toLowerCase() ===
+      String(inventory.strength ?? "").trim().toLowerCase();
+    const sameForm =
+      String(prescription.form ?? "").trim().toLowerCase() ===
+      String(inventory.doseForm ?? "").trim().toLowerCase();
+
+    if (!sameGeneric || !sameStrength || !sameForm) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Inventory does not match the prescription formulation"
+      );
+    }
+
+    const available = Number(inventory.availableQuantity ?? 0);
+    if (!Number.isFinite(available) || available < requestedQuantity) {
+      throw new HttpsError("failed-precondition", "Insufficient pharmacy stock");
+    }
+
+    const brandChanged =
+      String(prescription.brandName ?? "").trim().toLowerCase() !==
+      String(inventory.brandName ?? "").trim().toLowerCase() &&
+      String(inventory.brandName ?? "").trim() !== "";
+
+    if (brandChanged && prescription.substitutionAllowed !== true) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This prescription does not allow substitution"
+      );
+    }
+
+    tx.update(inventoryRef, {
+      availableQuantity: available - requestedQuantity,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    tx.set(orderRef, {
+      patientId: uid,
+      prescriptionId,
+      inventoryId,
+      pharmacyId: inventory.pharmacyId ?? null,
+      medicationCode: inventory.medicationCode ?? null,
+      genericName: inventory.genericName ?? null,
+      brandName: inventory.brandName ?? null,
+      strength: inventory.strength ?? null,
+      doseForm: inventory.doseForm ?? null,
+      quantity: requestedQuantity,
+      unitPrice: inventory.price ?? null,
+      currency: inventory.currency ?? null,
+      status: brandChanged ? "pharmacistReview" : "reserved",
+      requiresPharmacistReview: brandChanged,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  });
+
+  await audit(uid, "pharmacy.order.create", {
+    orderId: orderRef.id,
+    prescriptionId,
+    inventoryId,
+  });
+
+  return {
+    orderId: orderRef.id,
+    status: "created",
+  };
+});
