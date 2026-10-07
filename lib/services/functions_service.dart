@@ -85,4 +85,29 @@ class HulkaFunctions {
 
   Future<String> createPharmacyOrder(Map<String, Object?> payload) async =>
       (await _call('createPharmacyOrder', payload))['orderId'] as String;
+
+  Future<String> upsertPharmacyInventory(Map<String, Object?> payload) async =>
+      (await _call('upsertPharmacyInventory', payload))['inventoryId'] as String;
+
+  Future<void> updatePharmacyOrderStatus(
+    String orderId,
+    String status,
+  ) async {
+    await _call('updatePharmacyOrderStatus', {
+      'orderId': orderId,
+      'status': status,
+    });
+  }
+
+  Future<String> upsertHealthcareOrganization(
+    Map<String, Object?> payload,
+  ) async =>
+      (await _call('upsertHealthcareOrganization', payload))['organizationId']
+          as String;
+
+  Future<void> verifyProviderAccount(
+    Map<String, Object?> payload,
+  ) async {
+    await _call('verifyProviderAccount', payload);
+  }
 }
