@@ -46,9 +46,9 @@ class DeviceHealthService {
 
     final now = DateTime.now();
     final points = await _health.getHealthDataFromTypes(
-      now.subtract(const Duration(hours: 24)),
-      now,
-      readableTypes,
+      startTime: now.subtract(const Duration(hours: 24)),
+      endTime: now,
+      types: readableTypes,
     );
     final unique = _health.removeDuplicates(points);
 
