@@ -1,0 +1,95 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function role() {
+      return signedIn() ? userDoc().data.role : null;
+    }
+
+    function sameUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function activeConsent(patientId, granteeId, scope) {
+      let cid = patientId + '_' + granteeId;
+      let c = get(/databases/$(database)/documents/consents/$(cid));
+      return c.exists()
+        && c.data.revokedAt == null
+        && (c.data.expiresAt == null || c.data.expiresAt > request.time)
+        && scope in c.data.scopes;
+    }
+
+    match /users/{uid} {
+      allow read: if sameUser(uid);
+      allow create: if sameUser(uid);
+      allow update: if sameUser(uid);
+      allow delete: if false;
+    }
+
+    match /patients/{patientId} {
+      allow read: if sameUser(patientId)
+        || activeConsent(patientId, request.auth.uid, 'patient.profile.read');
+      allow create, update: if sameUser(patientId);
+      allow delete: if false;
+
+      match /timeline/{eventId} {
+        allow read: if sameUser(patientId)
+          || activeConsent(patientId, request.auth.uid, 'patient.timeline.read');
+        allow create: if sameUser(patientId)
+          || activeConsent(patientId, request.auth.uid, 'patient.timeline.write');
+        allow update: if activeConsent(patientId, request.auth.uid, 'patient.timeline.write');
+        allow delete: if false;
+      }
+
+      match /observations/{observationId} {
+        allow read: if sameUser(patientId)
+          || activeConsent(patientId, request.auth.uid, 'patient.observations.read');
+        allow create: if sameUser(patientId)
+          || activeConsent(patientId, request.auth.uid, 'patient.observations.write');
+        allow update, delete: if false;
+      }
+    }
+
+    match /consents/{consentId} {
+      allow read: if signedIn()
+        && (resource.data.patientId == request.auth.uid
+          || resource.data.granteeId == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.patientId == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.patientId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /prescriptions/{prescriptionId} {
+      allow read: if signedIn()
+        && (resource.data.patientId == request.auth.uid
+          || resource.data.clinicianId == request.auth.uid
+          || role() == 'pharmacist');
+      allow create: if signedIn() && role() == 'clinician';
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /pharmacyInventory/{itemId} {
+      allow read: if signedIn();
+      allow write: if signedIn() && role() == 'pharmacist';
+    }
+
+    match /auditEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /research/{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
