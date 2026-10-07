@@ -636,3 +636,72 @@ export const verifyProviderAccount = onCall(async (request) => {
   await audit(uid, "provider.verify", { providerUid, role, organizationId });
   return { ok: true };
 });
+
+
+export const evaluatePreventiveCare = onCall(async (request) => {
+  const uid = requireAuth(request.auth);
+  const patient = await db.collection("patients").doc(uid).get();
+  const profile = patient.data() ?? {};
+
+  const rulePack = await db.collection("preventiveRulePacks").doc("default").get();
+  if (!rulePack.exists) {
+    await audit(uid, "preventive.evaluate", { configured: false });
+    return {
+      configured: false,
+      generated: 0,
+      message: "No clinically reviewed preventive-care rule pack is configured for this deployment."
+    };
+  }
+
+  const rules = Array.isArray(rulePack.data()?.rules) ? rulePack.data()!.rules : [];
+  const dob = profile.dateOfBirth as string | undefined;
+  let age: number | null = null;
+  if (dob) {
+    const parsed = new Date(dob);
+    if (!Number.isNaN(parsed.getTime())) {
+      const now = new Date();
+      age = now.getUTCFullYear() - parsed.getUTCFullYear();
+      const beforeBirthday =
+        now.getUTCMonth() < parsed.getUTCMonth() ||
+        (now.getUTCMonth() === parsed.getUTCMonth() && now.getUTCDate() < parsed.getUTCDate());
+      if (beforeBirthday) age -= 1;
+    }
+  }
+
+  let generated = 0;
+  for (const raw of rules) {
+    const rule = raw as Record<string, unknown>;
+    const minAge = typeof rule.minAge === "number" ? rule.minAge : null;
+    const maxAge = typeof rule.maxAge === "number" ? rule.maxAge : null;
+    const sex = typeof rule.sex === "string" ? rule.sex : null;
+    const patientSex = typeof profile.sex === "string" ? profile.sex : null;
+
+    if (minAge !== null && (age === null || age < minAge)) continue;
+    if (maxAge !== null && (age === null || age > maxAge)) continue;
+    if (sex && patientSex && sex !== patientSex) continue;
+
+    const ruleId = String(rule.id ?? "");
+    const title = String(rule.title ?? "");
+    if (!ruleId || !title) continue;
+
+    const taskId = uid + "_" + ruleId;
+    await db.collection("preventiveTasks").doc(taskId).set({
+      patientId: uid,
+      ruleId,
+      title,
+      description: rule.description ?? null,
+      source: rule.source ?? null,
+      status: "due",
+      generatedAt: FieldValue.serverTimestamp(),
+      rulePackVersion: rulePack.data()?.version ?? null,
+    }, { merge: true });
+    generated += 1;
+  }
+
+  await audit(uid, "preventive.evaluate", {
+    configured: true,
+    generated,
+    rulePackVersion: rulePack.data()?.version ?? null,
+  });
+  return { configured: true, generated };
+});
