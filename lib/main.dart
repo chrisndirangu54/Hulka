@@ -1,13 +1,25 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'features/dashboard/hulka_dashboard.dart';
+import 'app_root.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(const ProviderScope(child: HulkaApp()));
+
+  Object? setupError;
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    setupError = e;
+  }
+
+  runApp(
+    ProviderScope(
+      child: setupError == null
+          ? const HulkaApp()
+          : HulkaSetupRequired(message: setupError.toString()),
+    ),
+  );
 }
 
 class HulkaApp extends StatelessWidget {
@@ -21,8 +33,9 @@ class HulkaApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0C7C78)),
         useMaterial3: true,
+        inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
       ),
-      home: const HulkaDashboard(),
+      home: const HulkaRoot(),
     );
   }
 }
