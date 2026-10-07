@@ -121,6 +121,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /pharmacyOrders/{orderId} {
+      allow read: if signedIn() &&
+        (resource.data.patientId == request.auth.uid ||
+         roleIs('pharmacist'));
+      allow write: if false;
+    }
+
     match /labResults/{resultId} {
       allow read: if signedIn() &&
         (resource.data.patientId == request.auth.uid ||
