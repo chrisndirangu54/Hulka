@@ -5,9 +5,9 @@ Hulka is a Flutter + Firebase digital-health platform designed for longitudinal 
 ## Product surfaces
 
 - Patient app: health timeline, appointments, telemedicine, prescriptions, pharmacy matching, wearables, labs, preventive care and AI health copilot.
-- Clinician workspace: longitudinal record search, encounters, labs, medicines, wearable trends, referrals, SOAP-note drafting and evidence-linked AI summaries.
+- Clinician workspace: consent-gated longitudinal record retrieval, consultation queue, recent observations and prescription issuance.
 - Pharmacy workspace: verified e-prescriptions, inventory matching, generic/brand mapping, pharmacist substitution review, dispensing and refill workflows.
-- Hospital workspace: provider directory, referrals, interoperability, operations and aggregate quality metrics.
+- Care network and administration: verified organizations/providers, interoperability boundaries and aggregate quality/research metrics.
 - Research/public-health workspace: de-identified cohort analytics, medicine-response and adverse-event signals, fairness checks and export-controlled research queries.
 - Administration: institution onboarding, clinician verification, integrations, security policy, audit review and model configuration. Platform administrators do not automatically receive unrestricted clinical-record access.
 
@@ -74,4 +74,6 @@ Hulka should expose/consume FHIR where practical, HL7 connectors for legacy hosp
 
 ## Status
 
-Foundation scaffold. Firebase configuration, provider credentials, video provider, pharmacy integrations, FHIR endpoints, wearable platform credentials and production AI endpoints must be configured per deployment.
+Hulka now contains working application and Firebase backend workflows for patient identity, consent, longitudinal records, telemedicine appointments, clinician history retrieval and prescribing, pharmacy inventory/reservations, wearables, labs, emergency profiles, care programs, caregivers, insurance records, wellness logs, preventive-care rules and privacy-preserving analytics.
+
+External systems such as hospital FHIR/HL7, DICOM/PACS, production video, insurer/payment networks, e-prescription certificates and production medical AI still require deployment-specific credentials and validation. Hulka fails closed rather than simulating those external services.
