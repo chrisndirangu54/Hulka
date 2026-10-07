@@ -66,7 +66,7 @@ class MedicationOutcomeAnalyzer {
         metric: o.metric,
         daysFromStart: delta,
         summary:
-            '${o.metric} changed/was reported ${delta} day(s) after medication initiation. This is temporal association, not proof of causation.',
+            '${o.metric} changed/was reported $delta day(s) after medication initiation. This is temporal association, not proof of causation.',
         requiresClinicalReview: true,
       );
     }).toList();
