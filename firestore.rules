@@ -66,6 +66,21 @@ service cloud.firestore {
           && request.resource.data.provenance == 'wearable';
         allow update, delete: if false;
       }
+
+      match /wellnessEntries/{entryId} {
+        allow read: if sameUser(patientId)
+          || (signedIn() && hasConsent(patientId, 'patient.observations.read'));
+        allow create: if sameUser(patientId)
+          && request.resource.data.patientId == patientId
+          && request.resource.data.synthetic == false
+          && request.resource.data.provenance == 'patientReported';
+        allow update: if sameUser(patientId)
+          && resource.data.patientId == patientId
+          && request.resource.data.patientId == patientId
+          && request.resource.data.synthetic == false
+          && request.resource.data.provenance == 'patientReported';
+        allow delete: if sameUser(patientId);
+      }
     }
 
     match /consents/{consentId} {
@@ -140,6 +155,15 @@ service cloud.firestore {
     match /organizations/{orgId} {
       allow read: if signedIn();
       allow write: if false;
+    }
+
+    match /preventiveTasks/{taskId} {
+      allow read: if signedIn() && resource.data.patientId == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /preventiveRulePacks/{packId} {
+      allow read, write: if false;
     }
 
     match /analyticsAggregates/{metricId} {
