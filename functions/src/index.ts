@@ -577,3 +577,62 @@ export const rebuildMedicationReactionAggregate = onCall(async (request) => {
     publishedCohorts: cohorts.length,
   };
 });
+
+
+export const upsertHealthcareOrganization = onCall(async (request) => {
+  const uid = requireAuth(request.auth);
+  await requireRole(uid, ["platformAdmin"]);
+  const d = request.data ?? {};
+  const name = String(d.name ?? "").trim();
+  const type = String(d.type ?? "").trim();
+  const countryCode = String(d.countryCode ?? "").trim();
+  if (!name || !type || !countryCode) {
+    throw new HttpsError("invalid-argument", "name, type and countryCode required");
+  }
+
+  const ref = d.organizationId
+    ? db.collection("organizations").doc(String(d.organizationId))
+    : db.collection("organizations").doc();
+
+  await ref.set({
+    name,
+    type,
+    countryCode,
+    facilityCode: d.facilityCode ?? null,
+    verified: d.verified === true,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  await audit(uid, "organization.upsert", { organizationId: ref.id, type });
+  return { organizationId: ref.id };
+});
+
+export const verifyProviderAccount = onCall(async (request) => {
+  const uid = requireAuth(request.auth);
+  await requireRole(uid, ["platformAdmin"]);
+
+  const providerUid = String(request.data?.providerUid ?? "");
+  const role = String(request.data?.role ?? "") as Role;
+  const organizationId = String(request.data?.organizationId ?? "");
+  const providerRoles: Role[] = ["clinician", "pharmacist", "laboratory", "hospitalAdmin", "researcher"];
+
+  if (!providerUid || !providerRoles.includes(role) || !organizationId) {
+    throw new HttpsError("invalid-argument", "providerUid, approved provider role and organizationId required");
+  }
+
+  const org = await db.collection("organizations").doc(organizationId).get();
+  if (!org.exists || org.data()?.verified !== true) {
+    throw new HttpsError("failed-precondition", "Provider organization must be verified first");
+  }
+
+  await db.collection("users").doc(providerUid).set({
+    role,
+    organizationId,
+    verified: true,
+    providerVerifiedAt: FieldValue.serverTimestamp(),
+    providerVerifiedBy: uid,
+  }, { merge: true });
+
+  await audit(uid, "provider.verify", { providerUid, role, organizationId });
+  return { ok: true };
+});
