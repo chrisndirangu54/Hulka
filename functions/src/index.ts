@@ -817,3 +817,32 @@ export const createPharmacyOrder = onCall(async (request) => {
     status: "created",
   };
 });
+
+
+export const updatePharmacyOrderStatus = onCall(async (request) => {
+  const uid = requireAuth(request.auth);
+  const u = await requireRole(uid, ["pharmacist"]);
+  const orderId = String(request.data?.orderId ?? "");
+  const status = String(request.data?.status ?? "");
+  const allowed = ["pharmacistReview", "confirmed", "ready", "dispensed", "cancelled"];
+  if (!orderId || !allowed.includes(status)) {
+    throw new HttpsError("invalid-argument", "Valid orderId and status required");
+  }
+
+  const ref = db.collection("pharmacyOrders").doc(orderId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Pharmacy order not found");
+  const order = snap.data() ?? {};
+  const organizationId = String(u.organizationId ?? "");
+  if (organizationId && order.pharmacyId && order.pharmacyId !== organizationId) {
+    throw new HttpsError("permission-denied", "Order belongs to another pharmacy");
+  }
+
+  await ref.update({
+    status,
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedBy: uid,
+  });
+  await audit(uid, "pharmacy.order.status", { orderId, status });
+  return { ok: true };
+});
