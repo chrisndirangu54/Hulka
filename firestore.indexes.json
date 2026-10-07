@@ -1,0 +1,6 @@
+{
+  "indexes": [
+    {"collectionGroup":"appointments","queryScope":"COLLECTION","fields":[{"fieldPath":"patientId","order":"ASCENDING"},{"fieldPath":"startsAt","order":"ASCENDING"}]}
+  ],
+  "fieldOverrides": []
+}
