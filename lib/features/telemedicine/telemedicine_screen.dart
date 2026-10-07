@@ -113,7 +113,7 @@ class _TelemedicineScreenState extends State<TelemedicineScreen> {
         const SizedBox(height: 12),
         FilledButton.icon(
           onPressed: busy ? null : request,
-          icon: const Icon(Icons.calendar_add_on_outlined),
+          icon: const Icon(Icons.event_available_outlined),
           label: const Text('Request consultation'),
         ),
         if (message != null) ...[
