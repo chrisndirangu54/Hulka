@@ -499,3 +499,81 @@ export const getPopulationMetric = onCall(async (request) => {
   if (!snap.exists) return { metric, available: false };
   return { metric, available: true, ...snap.data() };
 });
+
+
+function ageBand(dateOfBirth: unknown): string {
+  const value = dateOfBirth as { toDate?: () => Date } | string | undefined;
+  let dob: Date | null = null;
+  if (value && typeof value === "object" && typeof value.toDate === "function") dob = value.toDate();
+  if (typeof value === "string") {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) dob = parsed;
+  }
+  if (!dob) return "unknown";
+  const now = new Date();
+  let age = now.getUTCFullYear() - dob.getUTCFullYear();
+  const beforeBirthday =
+    now.getUTCMonth() < dob.getUTCMonth() ||
+    (now.getUTCMonth() === dob.getUTCMonth() && now.getUTCDate() < dob.getUTCDate());
+  if (beforeBirthday) age -= 1;
+  if (age < 18) return "under_18";
+  if (age < 30) return "18_29";
+  if (age < 45) return "30_44";
+  if (age < 60) return "45_59";
+  if (age < 75) return "60_74";
+  return "75_plus";
+}
+
+export const rebuildMedicationReactionAggregate = onCall(async (request) => {
+  const uid = requireAuth(request.auth);
+  await requireRole(uid, ["researcher", "hospitalAdmin"]);
+  const medicationCode = String(request.data?.medicationCode ?? "").trim();
+  if (!medicationCode) throw new HttpsError("invalid-argument", "medicationCode required");
+
+  const events = await db.collection("adverseEvents")
+    .where("medicationCode", "==", medicationCode)
+    .limit(5000)
+    .get();
+
+  const groups = new Map<string, number>();
+  for (const event of events.docs) {
+    const patientId = String(event.data().patientId ?? "");
+    if (!patientId) continue;
+    const patient = await db.collection("patients").doc(patientId).get();
+    const p = patient.data() ?? {};
+    const age = ageBand(p.dateOfBirth);
+    const sex = String(p.sex ?? "unknown");
+    const demographic = String(p.ethnicityOrRace ?? "not_provided");
+    const key = JSON.stringify({ ageBand: age, sex, demographic });
+    groups.set(key, (groups.get(key) ?? 0) + 1);
+  }
+
+  const minimumCohort = 10;
+  const cohorts = [...groups.entries()]
+    .filter(([, count]) => count >= minimumCohort)
+    .map(([key, count]) => ({ ...JSON.parse(key), adverseEventCount: count }));
+
+  const aggregate = {
+    medicationCode,
+    eventCount: events.size,
+    minimumCohort,
+    cohorts,
+    interpretation:
+      "Descriptive pharmacovigilance counts only. Demographic association does not establish biological causation or treatment effect.",
+    rebuiltAt: FieldValue.serverTimestamp(),
+  };
+
+  await db.collection("analyticsAggregates").doc("medication_" + medicationCode).set(aggregate);
+  await audit(uid, "analytics.medication_reaction.rebuild", {
+    medicationCode,
+    sourceEventCount: events.size,
+    publishedCohorts: cohorts.length,
+  });
+
+  return {
+    medicationCode,
+    eventCount: events.size,
+    minimumCohort,
+    publishedCohorts: cohorts.length,
+  };
+});
