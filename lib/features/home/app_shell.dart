@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../services/notification_service.dart';
+import '../admin/admin_screen.dart';
 import '../ai/ai_copilot_screen.dart';
 import '../analytics/analytics_screen.dart';
 import '../clinical/clinician_screen.dart';
@@ -9,6 +10,7 @@ import '../consent/consent_screen.dart';
 import '../emergency/emergency_screen.dart';
 import '../hospital/hospital_screen.dart';
 import '../more/more_health_screen.dart';
+import '../pharmacy/pharmacist_screen.dart';
 import '../pharmacy/pharmacy_screen.dart';
 import '../telemedicine/telemedicine_screen.dart';
 import '../timeline/timeline_screen.dart';
@@ -49,10 +51,32 @@ class _AppShellState extends State<AppShell> {
       const _Destination('More', Icons.apps_outlined, MoreHealthScreen()),
     ];
     if (role == 'clinician') {
-      base.add(const _Destination('Clinician', Icons.medical_services_outlined, ClinicianScreen()));
+      base.add(const _Destination(
+        'Clinician',
+        Icons.medical_services_outlined,
+        ClinicianScreen(),
+      ));
+    }
+    if (role == 'pharmacist') {
+      base.add(const _Destination(
+        'Pharmacist',
+        Icons.inventory_2_outlined,
+        PharmacistScreen(),
+      ));
     }
     if (role == 'researcher' || role == 'hospitalAdmin') {
-      base.add(const _Destination('Analytics', Icons.analytics_outlined, AnalyticsScreen()));
+      base.add(const _Destination(
+        'Analytics',
+        Icons.analytics_outlined,
+        AnalyticsScreen(),
+      ));
+    }
+    if (role == 'platformAdmin') {
+      base.add(const _Destination(
+        'Administration',
+        Icons.admin_panel_settings_outlined,
+        AdminScreen(),
+      ));
     }
     return base;
   }
