@@ -13,6 +13,7 @@ dependencies:
   firebase_auth: ^6.7.0
   cloud_firestore: ^6.10.0
   cloud_functions: ^6.5.0
+  http: ^1.2.2
   firebase_messaging: ^16.7.0
   firebase_storage: ^13.6.0
   flutter_riverpod: ^2.6.1
