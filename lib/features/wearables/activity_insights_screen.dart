@@ -111,7 +111,7 @@ class _ActivityInsightsScreenState extends State<ActivityInsightsScreen> {
                 ? sums[i] : sums[i] / samples[i];
           }
           final observed = series.whereType<double>().toList();
-          final peak = observed.isEmpty ? 1.0 : observed.reduce((a,b) => a > b ? a : b).clamp(1.0, double.infinity);
+          final peak = observed.isEmpty ? 1.0 : observed.reduce((a,b) => a > b ? a : b).clamp(1.0, double.infinity).toDouble();
           final total = observed.fold<double>(0, (a,b) => a + b);
           return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
             crossAxisAlignment: CrossAxisAlignment.start, children: [
