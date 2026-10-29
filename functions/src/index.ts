@@ -670,6 +670,13 @@ export const evaluatePreventiveCare = onCall(async (request) => {
     }
   }
 
+  // Never execute draft or unapproved clinical rule packs.
+  if (rulePack.data()?.status !== "clinicallyApproved" || !rulePack.data()?.reviewedBy ||
+      !rulePack.data()?.version) {
+    return { configured: false, generated: 0,
+      message: "A versioned, clinician-approved preventive rule pack is required." };
+  }
+
   let generated = 0;
   for (const raw of rules) {
     const rule = raw as Record<string, unknown>;
@@ -680,7 +687,17 @@ export const evaluatePreventiveCare = onCall(async (request) => {
 
     if (minAge !== null && (age === null || age < minAge)) continue;
     if (maxAge !== null && (age === null || age > maxAge)) continue;
-    if (sex && patientSex && sex !== patientSex) continue;
+    if (sex && (!patientSex || sex.toLowerCase() !== patientSex.toLowerCase())) continue;
+    const requiredConditions = Array.isArray(rule.conditions)
+      ? rule.conditions.map(String).map(s => s.toLowerCase()) : [];
+    const patientConditions = Array.isArray(profile.conditions)
+      ? profile.conditions.map(String).map(s => s.toLowerCase()) : [];
+    if (requiredConditions.length && !requiredConditions.some(c => patientConditions.includes(c))) continue;
+    const excludedConditions = Array.isArray(rule.excludeConditions)
+      ? rule.excludeConditions.map(String).map(s => s.toLowerCase()) : [];
+    if (excludedConditions.some(c => patientConditions.includes(c))) continue;
+    if (rule.countryCode && rule.countryCode !== (profile.countryCode ?? "KE")) continue;
+    if (rule.clinicallyApproved !== true || !rule.source || !rule.sourceUrl) continue;
 
     const ruleId = String(rule.id ?? "");
     const title = String(rule.title ?? "");
@@ -692,7 +709,10 @@ export const evaluatePreventiveCare = onCall(async (request) => {
       ruleId,
       title,
       description: rule.description ?? null,
-      source: rule.source ?? null,
+      source: rule.source,
+      sourceUrl: rule.sourceUrl,
+      reviewStatus: "requiresClinicianConfirmation",
+      rationale: "Matched clinically reviewed age, sex and condition criteria",
       status: "due",
       generatedAt: FieldValue.serverTimestamp(),
       rulePackVersion: rulePack.data()?.version ?? null,
