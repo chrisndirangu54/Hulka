@@ -677,6 +677,15 @@ export const evaluatePreventiveCare = onCall(async (request) => {
       message: "A versioned, clinician-approved preventive rule pack is required." };
   }
 
+  const approvedAt = rulePack.data()?.approvedAt?.toDate?.();
+  const expiresAt = rulePack.data()?.expiresAt?.toDate?.();
+  if (!approvedAt || !expiresAt || approvedAt.getTime() > Date.now() ||
+      expiresAt.getTime() <= Date.now() ||
+      rulePack.data()?.countryCode !== (profile.countryCode ?? "KE")) {
+    return {configured: false, generated: 0,
+      message: "No current, locally approved clinical protocol is available for this profile."};
+  }
+
   let generated = 0;
   for (const raw of rules) {
     const rule = raw as Record<string, unknown>;
@@ -698,6 +707,7 @@ export const evaluatePreventiveCare = onCall(async (request) => {
     if (excludedConditions.some(c => patientConditions.includes(c))) continue;
     if (rule.countryCode && rule.countryCode !== (profile.countryCode ?? "KE")) continue;
     if (rule.clinicallyApproved !== true || !rule.source || !rule.sourceUrl) continue;
+    if (typeof rule.sourceUrl !== "string" || !rule.sourceUrl.startsWith("https://")) continue;
 
     const ruleId = String(rule.id ?? "");
     const title = String(rule.title ?? "");
