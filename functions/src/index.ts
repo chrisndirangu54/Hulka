@@ -640,6 +640,43 @@ export const verifyProviderAccount = onCall(async (request) => {
 });
 
 
+/**
+ * Clinician-only reconciliation of patient-supplied history.
+ * Reviewers must have verified clinical roles and active patient consent.
+ */
+export const reconcileImportedHistory = onCall(async request => {
+  const clinicianId = requireAuth(request.auth);
+  await requireRole(clinicianId, ["clinician"]);
+  const patientId = String(request.data?.patientId ?? "");
+  const eventId = String(request.data?.eventId ?? "");
+  const outcome = String(request.data?.outcome ?? "");
+  const note = String(request.data?.note ?? "").trim();
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(patientId) ||
+      !/^[A-Za-z0-9_-]{1,128}$/.test(eventId) ||
+      !["verified", "rejected"].includes(outcome) || note.length < 10 ||
+      note.length > 2000) {
+    throw new HttpsError("invalid-argument", "Valid patient, event, outcome and review rationale required");
+  }
+  if (!(await activeConsent(patientId, clinicianId, ["patient.timeline.read", "patient.timeline.write"]))) {
+    throw new HttpsError("permission-denied", "Current patient consent required");
+  }
+  const ref = db.collection("patients").doc(patientId).collection("timeline").doc(eventId);
+  await db.runTransaction(async tx => {
+    const entry = await tx.get(ref);
+    const data = entry.data();
+    if (!data || !["patientDocument", "importedHospitalHistory"].includes(data.type)) {
+      throw new HttpsError("failed-precondition", "Patient-submitted event not found");
+    }
+    if (data.reviewStatus !== "unverified") {
+      throw new HttpsError("failed-precondition", "Entry has already been reviewed");
+    }
+    tx.update(ref, {reviewStatus: outcome, reviewedBy: clinicianId,
+      reviewNote: note, reviewedAt: FieldValue.serverTimestamp()});
+  });
+  await audit(clinicianId, "clinical.history.reconcile", {patientId, eventId, outcome});
+  return {ok: true, reviewStatus: outcome};
+});
+
 export const evaluatePreventiveCare = onCall(async (request) => {
   const uid = requireAuth(request.auth);
   const patient = await db.collection("patients").doc(uid).get();
