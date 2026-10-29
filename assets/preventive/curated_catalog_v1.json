@@ -1,0 +1,122 @@
+{
+  "schema": "hulka.preventive.catalog.v1",
+  "status": "educationalDraft",
+  "countryCode": "KE",
+  "reviewRequired": true,
+  "sources": [
+    {
+      "id": "who",
+      "name": "World Health Organization",
+      "url": "https://www.who.int/health-topics/vaccines-and-immunization"
+    },
+    {
+      "id": "moh-ke",
+      "name": "Kenya Ministry of Health",
+      "url": "https://www.health.go.ke/"
+    },
+    {
+      "id": "cdc",
+      "name": "US Centers for Disease Control and Prevention",
+      "url": "https://www.cdc.gov/vaccines/hcp/imz-schedules/index.html",
+      "jurisdiction": "US, informational only"
+    },
+    {
+      "id": "red-cross",
+      "name": "International Federation of Red Cross and Red Crescent Societies",
+      "url": "https://www.ifrc.org/our-work/health-and-care/first-aid"
+    }
+  ],
+  "packages": [
+    {
+      "id": "immunization",
+      "name": "Immunization review",
+      "topics": [
+        "routine immunization",
+        "missed dose review",
+        "record reconciliation"
+      ],
+      "sources": [
+        "who",
+        "moh-ke"
+      ],
+      "minAge": null,
+      "maxAge": null,
+      "autoSchedule": false
+    },
+    {
+      "id": "maternal",
+      "name": "Maternal and reproductive health",
+      "topics": [
+        "antenatal contacts",
+        "postpartum care",
+        "family planning information"
+      ],
+      "sources": [
+        "who",
+        "moh-ke"
+      ],
+      "requiresClinicalContext": true,
+      "autoSchedule": false
+    },
+    {
+      "id": "cardiometabolic",
+      "name": "Cardiometabolic prevention",
+      "topics": [
+        "blood pressure",
+        "diabetes risk",
+        "nutrition",
+        "physical activity"
+      ],
+      "sources": [
+        "who",
+        "moh-ke"
+      ],
+      "requiresClinicalContext": true,
+      "autoSchedule": false
+    },
+    {
+      "id": "infectious",
+      "name": "Infectious disease prevention",
+      "topics": [
+        "HIV",
+        "tuberculosis",
+        "malaria"
+      ],
+      "sources": [
+        "who",
+        "moh-ke"
+      ],
+      "requiresClinicalContext": true,
+      "autoSchedule": false
+    },
+    {
+      "id": "emergency",
+      "name": "First aid and emergency readiness",
+      "topics": [
+        "first aid skills",
+        "emergency contacts"
+      ],
+      "sources": [
+        "red-cross"
+      ],
+      "autoSchedule": false
+    },
+    {
+      "id": "travel",
+      "name": "Travel health information",
+      "topics": [
+        "destination-specific vaccination review"
+      ],
+      "sources": [
+        "who",
+        "cdc"
+      ],
+      "requiresClinicalContext": true,
+      "autoSchedule": false
+    }
+  ],
+  "governance": {
+    "publication": "Requires licensed clinical reviewer, local protocol verification, effective date, review date, approval signature and documented applicable population.",
+    "patientUse": "Education only until approved."
+  }
+}
