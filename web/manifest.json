@@ -1,0 +1,35 @@
+{
+    "name": "Hulka",
+    "short_name": "Hulka",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#0C7C78",
+    "theme_color": "#0C7C78",
+    "description": "Cross-hospital digital health, telemedicine, pharmacy and health intelligence.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../services/notification_service.dart';
+import '../../ui/hulka_look.dart';
 import '../admin/admin_screen.dart';
 import '../ai/ai_copilot_screen.dart';
 import '../analytics/analytics_screen.dart';
@@ -15,6 +16,7 @@ import '../pharmacy/pharmacy_screen.dart';
 import '../telemedicine/telemedicine_screen.dart';
 import '../timeline/timeline_screen.dart';
 import '../wearables/wearables_screen.dart';
+import '../wellness/wellness_screen.dart';
 
 class _Destination {
   const _Destination(this.label, this.icon, this.page);
@@ -41,6 +43,7 @@ class _AppShellState extends State<AppShell> {
   List<_Destination> destinationsFor(String role) {
     final base = <_Destination>[
       const _Destination('Timeline', Icons.timeline, TimelineScreen()),
+      const _Destination('Nutrition', Icons.restaurant_outlined, WellnessScreen()),
       const _Destination('Telemedicine', Icons.video_call_outlined, TelemedicineScreen()),
       const _Destination('Pharmacy', Icons.local_pharmacy_outlined, PharmacyScreen()),
       const _Destination('Wearables', Icons.watch_outlined, WearablesScreen()),
@@ -92,8 +95,9 @@ class _AppShellState extends State<AppShell> {
         final selected = index < destinations.length ? index : 0;
 
         return Scaffold(
+          backgroundColor: HulkaLook.linen,
           appBar: AppBar(
-            title: Text('Hulka • ${destinations[selected].label}'),
+            title: Text('Hulka  ·  ${destinations[selected].label}'),
             actions: [
               IconButton(
                 onPressed: () => FirebaseAuth.instance.signOut(),
@@ -130,21 +134,38 @@ class _AppShellState extends State<AppShell> {
               : null,
           body: LayoutBuilder(
             builder: (context, constraints) {
+              final page = AnimatedSwitcher(
+                duration: HulkaLook.ui,
+                switchInCurve: HulkaLook.easeOut,
+                switchOutCurve: HulkaLook.easeOut,
+                transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+                child: KeyedSubtree(
+                  key: ValueKey(selected),
+                  child: destinations[selected].page,
+                ),
+              );
               if (constraints.maxWidth < 760) {
-                return destinations[selected].page;
+                return page;
               }
               return Row(
                 children: [
-                  NavigationRail(
-                    selectedIndex: selected,
-                    onDestinationSelected: (value) => setState(() => index = value),
-                    labelType: NavigationRailLabelType.all,
-                    destinations: destinations
-                        .map((d) => NavigationRailDestination(icon: Icon(d.icon), label: Text(d.label)))
-                        .toList(),
+                  SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: IntrinsicHeight(
+                        child: NavigationRail(
+                          selectedIndex: selected,
+                          onDestinationSelected: (value) => setState(() => index = value),
+                          labelType: NavigationRailLabelType.all,
+                          destinations: destinations
+                              .map((d) => NavigationRailDestination(icon: Icon(d.icon), label: Text(d.label)))
+                              .toList(),
+                        ),
+                      ),
+                    ),
                   ),
                   const VerticalDivider(width: 1),
-                  Expanded(child: destinations[selected].page),
+                  Expanded(child: page),
                 ],
               );
             },

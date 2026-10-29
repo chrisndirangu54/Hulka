@@ -31,13 +31,37 @@ service cloud.firestore {
       allow create: if sameUser(uid)
         && request.resource.data.role == 'patient'
         && request.resource.data.verified == true;
+      allow update: if roleIs('platformAdmin')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'role',
+          'organizationId',
+          'verified',
+          'displayName',
+          'providerVerifiedAt',
+          'providerVerifiedBy'
+        ]);
       allow update: if sameUser(uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'displayName',
           'email',
           'fcmTokens',
-          'notificationsUpdatedAt'
-        ]);
+          'notificationsUpdatedAt',
+          'sokonisLink'
+        ])
+        && (
+          !('sokonisLink' in request.resource.data)
+          || request.resource.data.sokonisLink == null
+          || (
+            request.resource.data.sokonisLink is map
+            && request.resource.data.sokonisLink.keys().hasOnly(['uid', 'email', 'linkedAt'])
+            && request.resource.data.sokonisLink.uid is string
+            && request.resource.data.sokonisLink.uid.size() > 0
+            && request.resource.data.sokonisLink.uid.size() < 128
+            && request.resource.data.sokonisLink.email is string
+            && request.resource.data.sokonisLink.email.size() < 180
+            && request.resource.data.sokonisLink.linkedAt is timestamp
+          )
+        );
       allow delete: if false;
     }
 
@@ -65,6 +89,20 @@ service cloud.firestore {
           && request.resource.data.synthetic == false
           && request.resource.data.provenance == 'wearable';
         allow update, delete: if false;
+      }
+
+      match /dosageReminders/{reminderId} {
+        allow read, delete: if sameUser(patientId);
+        allow create: if sameUser(patientId)
+          && request.resource.data.patientId == patientId
+          && request.resource.data.medicine is string
+          && request.resource.data.medicine.size() > 0
+          && request.resource.data.medicine.size() < 120
+          && request.resource.data.times is list
+          && request.resource.data.times.size() > 0
+          && request.resource.data.times.size() < 12;
+        allow update: if sameUser(patientId)
+          && request.resource.data.patientId == patientId;
       }
 
       match /wellnessEntries/{entryId} {
@@ -125,7 +163,15 @@ service cloud.firestore {
       allow read: if signedIn() &&
         (resource.data.patientId == request.auth.uid ||
          roleIs('pharmacist'));
-      allow write: if false;
+      allow create: if signedIn()
+        && request.resource.data.patientId == request.auth.uid
+        && request.resource.data.status == 'reserved'
+        && request.resource.data.inventoryId is string
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity > 0
+        && request.resource.data.quantity < 500;
+      allow update: if roleIs('pharmacist');
+      allow delete: if false;
     }
 
     match /labResults/{resultId} {
@@ -161,7 +207,8 @@ service cloud.firestore {
 
     match /organizations/{orgId} {
       allow read: if signedIn();
-      allow write: if false;
+      allow create, update: if roleIs('platformAdmin');
+      allow delete: if false;
     }
 
     match /preventiveTasks/{taskId} {
@@ -187,6 +234,89 @@ service cloud.firestore {
 
     match /research/{document=**} {
       allow read, write: if false;
+    }
+
+    match /clinicianDirectory/{docId} {
+      allow read: if signedIn();
+      allow create, update: if roleIs('platformAdmin');
+      allow delete: if false;
+    }
+
+    match /pharmaceuticalProducts/{productId} {
+      allow read: if signedIn();
+      allow create, update: if roleIs('platformAdmin');
+      allow delete: if false;
+    }
+
+    match /ambulanceUnits/{unitId} {
+      allow read: if signedIn();
+      allow create, update: if roleIs('platformAdmin');
+      allow delete: if false;
+    }
+
+    match /ambulanceRequests/{requestId} {
+      allow read: if signedIn() && (
+        resource.data.patientId == request.auth.uid
+        || roleIs('platformAdmin')
+        || roleIs('hospitalAdmin')
+        || roleIs('clinician')
+      );
+      allow create: if signedIn()
+        && request.resource.data.patientId == request.auth.uid
+        && request.resource.data.status == 'requested'
+        && request.resource.data.hospitalName is string
+        && request.resource.data.hospitalName.size() > 0
+        && request.resource.data.hospitalName.size() < 180
+        && request.resource.data.locationNote is string
+        && request.resource.data.locationNote.size() < 500;
+      allow update: if signedIn() && (
+        (resource.data.patientId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          && request.resource.data.status == 'cancelled')
+        || roleIs('platformAdmin')
+        || roleIs('hospitalAdmin')
+      );
+      allow delete: if false;
+    }
+
+    match /partnerApplications/{appId} {
+      allow read: if signedIn() && (
+        resource.data.applicantUid == request.auth.uid || roleIs('platformAdmin')
+      );
+      allow create: if signedIn()
+        && request.resource.data.applicantUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.organizationName is string
+        && request.resource.data.organizationName.size() > 0
+        && request.resource.data.organizationName.size() < 180
+        && request.resource.data.note is string
+        && request.resource.data.note.size() < 2000;
+      allow update: if roleIs('platformAdmin');
+      allow delete: if false;
+    }
+
+    match /prescriptionUploads/{patientId}/{group}/{itemId} {
+      allow read: if signedIn() && request.auth.uid == patientId;
+      allow create: if signedIn() && request.auth.uid == patientId
+        && (group == 'uploads' || group == 'items');
+      allow update: if signedIn() && request.auth.uid == patientId && group == 'uploads'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if false;
+    }
+
+    match /prescriptionUploads/{uploadId} {
+      allow read: if signedIn() && (
+        resource.data.patientId == request.auth.uid
+        || roleIs('pharmacist')
+        || roleIs('clinician')
+        || roleIs('platformAdmin')
+      );
+      allow create: if signedIn()
+        && request.resource.data.patientId == request.auth.uid
+        && request.resource.data.genericName is string
+        && request.resource.data.genericName.size() > 0
+        && request.resource.data.genericName.size() < 120;
+      allow update, delete: if false;
     }
   }
 }

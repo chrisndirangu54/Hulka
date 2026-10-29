@@ -1,3 +1,5 @@
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import { getMessaging } from "firebase-admin/messaging";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
@@ -710,7 +712,8 @@ export const evaluatePreventiveCare = onCall(async (request) => {
 export const createPharmacyOrder = onCall(async (request) => {
   const uid = requireAuth(request.auth);
   const d = request.data ?? {};
-  const prescriptionId = String(d.prescriptionId ?? "");
+  const uploadItemId = String(d.uploadItemId ?? "");
+  const prescriptionId = String(d.prescriptionId ?? uploadItemId);
   const inventoryId = String(d.inventoryId ?? "");
   const requestedQuantity = Number(d.quantity ?? 0);
 
@@ -721,7 +724,9 @@ export const createPharmacyOrder = onCall(async (request) => {
     );
   }
 
-  const prescriptionRef = db.collection("prescriptions").doc(prescriptionId);
+  const prescriptionRef = uploadItemId
+    ? db.collection("prescriptionUploads").doc(uid).collection("items").doc(uploadItemId)
+    : db.collection("prescriptions").doc(prescriptionId);
   const inventoryRef = db.collection("pharmacyInventory").doc(inventoryId);
   const orderRef = db.collection("pharmacyOrders").doc();
 
@@ -744,7 +749,7 @@ export const createPharmacyOrder = onCall(async (request) => {
     if (prescription.patientId !== uid) {
       throw new HttpsError("permission-denied", "This prescription does not belong to the current patient");
     }
-    if (prescription.status !== "active") {
+    if (!uploadItemId && prescription.status !== "active") {
       throw new HttpsError("failed-precondition", "Prescription is not active");
     }
 
@@ -755,7 +760,7 @@ export const createPharmacyOrder = onCall(async (request) => {
       String(prescription.strength ?? "").trim().toLowerCase() ===
       String(inventory.strength ?? "").trim().toLowerCase();
     const sameForm =
-      String(prescription.form ?? "").trim().toLowerCase() ===
+      String(prescription.form ?? prescription.doseForm ?? "").trim().toLowerCase() ===
       String(inventory.doseForm ?? "").trim().toLowerCase();
 
     if (!sameGeneric || !sameStrength || !sameForm) {
@@ -800,8 +805,8 @@ export const createPharmacyOrder = onCall(async (request) => {
       quantity: requestedQuantity,
       unitPrice: inventory.price ?? null,
       currency: inventory.currency ?? null,
-      status: brandChanged ? "pharmacistReview" : "reserved",
-      requiresPharmacistReview: brandChanged,
+      status: (uploadItemId || brandChanged) ? "pharmacistReview" : "reserved",
+      requiresPharmacistReview: Boolean(uploadItemId) || brandChanged,
       createdAt: FieldValue.serverTimestamp(),
     });
   });
@@ -845,4 +850,43 @@ export const updatePharmacyOrderStatus = onCall(async (request) => {
   });
   await audit(uid, "pharmacy.order.status", { orderId, status });
   return { ok: true };
+});
+
+
+// Clock times use the offset captured on the device when the reminder is saved.
+export const dispatchDosageReminders = onSchedule("every 1 minutes", async () => {
+  const now = new Date();
+  const reminders = await db.collectionGroup("dosageReminders").where("active", "==", true).get();
+  for (const doc of reminders.docs) {
+    const data = doc.data();
+    const uid = doc.ref.parent.parent?.id;
+    if (!uid || doc.ref.parent.parent?.parent.id !== "patients") continue;
+    const offset = Number(data.utcOffsetMinutes ?? 180);
+    if (!Number.isFinite(offset)) continue;
+    const local = new Date(now.getTime() + offset * 60000);
+    const clock = `${String(local.getUTCHours()).padStart(2, "0")}:${String(local.getUTCMinutes()).padStart(2, "0")}`;
+    if (!Array.isArray(data.times) || !data.times.includes(clock)) continue;
+    const key = `${local.toISOString().slice(0, 10)}_${clock}`;
+    const profile = await db.collection("users").doc(uid).get();
+    const tokens = (profile.data()?.fcmTokens ?? []).filter((token: unknown) => typeof token === "string");
+    if (!tokens.length) continue;
+    const claimed = await db.runTransaction(async (tx) => {
+      const current = (await tx.get(doc.ref)).data();
+      if (!current?.active || current.lastDispatchKey === key) return false;
+      tx.update(doc.ref, { lastDispatchKey: key, lastDispatchedAt: FieldValue.serverTimestamp() });
+      return true;
+    });
+    if (!claimed) continue;
+    try {
+      for (let i = 0; i < tokens.length; i += 500) {
+        await getMessaging().sendEachForMulticast({
+          tokens: tokens.slice(i, i + 500),
+          notification: { title: "Dosage reminder", body: `Time for ${data.medicine}. Follow your prescribed instructions.` },
+          data: { reminderId: doc.id, type: "dosageReminder" },
+        });
+      }
+    } catch (error) {
+      console.error("Dosage notification failed", doc.id, error);
+    }
+  }
 });
