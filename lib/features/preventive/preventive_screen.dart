@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:convert';
 import '../../ui/health_workspace.dart';
 import '../../ui/hulka_board.dart';
 import '../timeline/patient_records_screen.dart';
@@ -95,6 +97,27 @@ class _PreventiveScreenState extends State<PreventiveScreen> {
         ),
         if (message != null) ...[const SizedBox(height: 12), Text(message!)],
         const SizedBox(height: 20),
+        FutureBuilder<String>(
+          future: rootBundle.loadString('assets/preventive/curated_catalog_v1.json'),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final data = jsonDecode(snapshot.data!) as Map<String, dynamic>;
+            final packages = data['packages'] as List<dynamic>;
+            return HulkaBoard(
+              title: 'Preventive-care packages',
+              subtitle: 'Educational drafts only. Clinical approval is required before personal recommendations.',
+              child: Column(children: [
+                for (final item in packages)
+                  ListTile(
+                    leading: const Icon(Icons.health_and_safety_outlined),
+                    title: Text(item['name'].toString()),
+                    subtitle: Text((item['topics'] as List<dynamic>).join(' • ')),
+                  ),
+              ]),
+            );
+          },
+        ),
+        const SizedBox(height: 16),
         HulkaBoard(
           title: 'Trusted preventive-care library',
           subtitle: 'Educational references, not individualized prescriptions. Kenyan care pathways require locally approved clinical rules.',
