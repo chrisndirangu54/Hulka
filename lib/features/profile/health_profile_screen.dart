@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../ui/health_workspace.dart';
+import '../../ui/hulka_board.dart';
 
 class HealthProfileScreen extends StatefulWidget {
   const HealthProfileScreen({super.key});
@@ -30,16 +32,53 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
 
   Future<void> load() async {
     final id = uid;
-    if (id == null) return;
-    final snap = await FirebaseFirestore.instance.collection('patients').doc(id).get();
-    final d = snap.data() ?? {};
-    displayName.text = (d['displayName'] as String?) ?? '';
-    dateOfBirth.text = (d['dateOfBirth'] as String?) ?? '';
-    sex.text = (d['sex'] as String?) ?? '';
-    ethnicityOrRace.text = (d['ethnicityOrRace'] as String?) ?? '';
-    allergies.text = ((d['allergies'] as List?) ?? const []).join(', ');
-    conditions.text = ((d['conditions'] as List?) ?? const []).join(', ');
-    if (mounted) setState(() => loading = false);
+    if (id == null) {
+      if (mounted) {
+        setState(() {
+          loading = false;
+          message = 'Sign in to load your health profile.';
+        });
+      }
+      return;
+    }
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('patients')
+          .doc(id)
+          .get();
+      if (!mounted) return;
+      final d = snap.data() ?? {};
+      displayName.text = (d['displayName'] as String?) ?? '';
+      dateOfBirth.text = (d['dateOfBirth'] as String?) ?? '';
+      sex.text = (d['sex'] as String?) ?? '';
+      ethnicityOrRace.text = (d['ethnicityOrRace'] as String?) ?? '';
+      allergies.text = ((d['allergies'] as List?) ?? const []).join(', ');
+      conditions.text = ((d['conditions'] as List?) ?? const []).join(', ');
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => message =
+              'Your profile could not be loaded. Go back and try again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in [
+      displayName,
+      dateOfBirth,
+      sex,
+      ethnicityOrRace,
+      allergies,
+      conditions,
+    ]) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   List<String> splitValues(String value) => value
@@ -93,34 +132,102 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator());
 
-    return ListView(
-      padding: const EdgeInsets.all(20),
+    return HealthPageBody(
       children: [
-        Text('Health profile', style: Theme.of(context).textTheme.headlineSmall),
+        Text(
+          'Your health details',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
         const SizedBox(height: 8),
         const Text(
-          'Keep core details current so clinicians can interpret your history in context. '
-          'Demographic fields are optional; where used in analytics, they support fairness '
-          'and epidemiological analysis rather than being treated as biological causation.',
+          'Keep the details your care team relies on up to date.',
+          style: TextStyle(height: 1.5),
+        ),
+        const SizedBox(height: 24),
+        HulkaBoard(
+          title: 'Personal details',
+          subtitle: 'Add only the information you want to share.',
+          child: Column(
+            children: [
+              TextField(
+                controller: displayName,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Full name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 16),
+              HealthFieldPair(
+                first: TextField(
+                  controller: dateOfBirth,
+                  keyboardType: TextInputType.datetime,
+                  decoration: const InputDecoration(
+                    labelText: 'Date of birth',
+                    hintText: 'YYYY-MM-DD',
+                    prefixIcon: Icon(Icons.calendar_today_outlined),
+                  ),
+                ),
+                second: TextField(
+                  controller: sex,
+                  decoration: const InputDecoration(
+                    labelText: 'Sex (optional)',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: ethnicityOrRace,
+                decoration: const InputDecoration(
+                  labelText: 'Ethnicity or race (optional)',
+                  helperText: 'Used to assess fairness and population health.',
+                  helperMaxLines: 3,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 20),
-        TextField(controller: displayName, decoration: const InputDecoration(labelText: 'Full name')),
-        const SizedBox(height: 12),
-        TextField(controller: dateOfBirth, decoration: const InputDecoration(labelText: 'Date of birth', hintText: 'YYYY-MM-DD')),
-        const SizedBox(height: 12),
-        TextField(controller: sex, decoration: const InputDecoration(labelText: 'Sex / clinically relevant sex field')),
-        const SizedBox(height: 12),
-        TextField(controller: ethnicityOrRace, decoration: const InputDecoration(labelText: 'Ethnicity or race', helperText: 'Optional; primarily for equity/fairness analysis.')),
-        const SizedBox(height: 12),
-        TextField(controller: allergies, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Allergies', helperText: 'Separate multiple entries with commas.')),
-        const SizedBox(height: 12),
-        TextField(controller: conditions, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Known conditions', helperText: 'Separate multiple entries with commas.')),
-        if (message != null) ...[const SizedBox(height: 12), Text(message!)],
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: saving ? null : save,
-          icon: const Icon(Icons.save_outlined),
-          label: Text(saving ? 'Saving…' : 'Save profile'),
+        HulkaBoard(
+          title: 'Allergies & conditions',
+          subtitle: 'Separate multiple entries with commas.',
+          child: Column(
+            children: [
+              TextField(
+                controller: allergies,
+                minLines: 2,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Allergies',
+                  hintText: 'For example, penicillin, peanuts',
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: conditions,
+                minLines: 2,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Known conditions',
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (message != null) ...[
+          const SizedBox(height: 16),
+          Semantics(liveRegion: true, child: Text(message!)),
+        ],
+        const SizedBox(height: 24),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.icon(
+            onPressed: saving ? null : save,
+            icon: const Icon(Icons.save_outlined),
+            label: Text(saving ? 'Saving...' : 'Save profile'),
+          ),
         ),
       ],
     );

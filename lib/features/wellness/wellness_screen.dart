@@ -8,7 +8,9 @@ import '../../ui/hulka_look.dart';
 import 'nutrition_workspace.dart';
 
 class WellnessScreen extends StatefulWidget {
-  const WellnessScreen({super.key, this.client});
+  const WellnessScreen({super.key, this.client, this.embedded = false});
+
+  final bool embedded;
 
   final SokonisClient? client;
 
@@ -365,7 +367,7 @@ class _WellnessScreenState extends State<WellnessScreen> {
           );
 
     final canPop = Navigator.of(context).canPop();
-    if (!canPop) return page;
+    if (!canPop || widget.embedded) return page;
     return Scaffold(
       backgroundColor: HulkaLook.linen,
       appBar: AppBar(title: const Text('Nutrition')),

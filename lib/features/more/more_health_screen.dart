@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-
-import '../../ui/care_scenes.dart';
+import '../../ui/health_workspace.dart';
 import '../../ui/hulka_look.dart';
-import '../../ui/motion_widgets.dart';
 import '../care/care_programs_screen.dart';
 import '../caregiver/caregiver_screen.dart';
 import '../insurance/insurance_screen.dart';
@@ -15,190 +13,192 @@ import '../wellness/wellness_screen.dart';
 class MoreHealthScreen extends StatelessWidget {
   const MoreHealthScreen({super.key});
 
-  void open(BuildContext context, Widget screen) {
+  static const modules = <(String, IconData, String, Widget)>[
+    (
+      'Health profile',
+      Icons.person_outline,
+      'Your details, allergies and known conditions.',
+      HealthProfileScreen(),
+    ),
+    (
+      'Labs & diagnostics',
+      Icons.biotech_outlined,
+      'Test results and reference ranges in one place.',
+      LabsScreen(),
+    ),
+    (
+      'Chronic & maternal care',
+      Icons.favorite_outline,
+      'Care programs for ongoing conditions and family health.',
+      CareProgramsScreen(),
+    ),
+    (
+      'Family & caregivers',
+      Icons.group_outlined,
+      'Choose who can help with your care.',
+      CaregiverScreen(),
+    ),
+    (
+      'Insurance',
+      Icons.shield_outlined,
+      'Manage coverage, benefits and insurance requests.',
+      InsuranceScreen(),
+    ),
+    (
+      'Preventive care',
+      Icons.event_available_outlined,
+      'Keep track of screenings and follow-ups.',
+      PreventiveScreen(),
+    ),
+    (
+      'Safety tips',
+      Icons.health_and_safety_outlined,
+      'Practical guidance from trusted health agencies.',
+      SafetyTipsScreen(embedded: true),
+    ),
+    (
+      'Nutrition & activity',
+      Icons.restaurant_outlined,
+      'Connect your meals, pantry and daily habits.',
+      WellnessScreen(embedded: true),
+    ),
+  ];
+
+  void open(BuildContext context, int index) {
+    final module = modules[index];
     Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        transitionDuration: HulkaLook.ui,
-        reverseTransitionDuration: HulkaLook.press,
-        pageBuilder: (_, animation, __) => FadeTransition(
-          opacity: animation,
-          child: screen,
-        ),
+      MaterialPageRoute<void>(
+        builder: (_) => HealthDetailPage(title: module.$1, child: module.$4),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final modules = <(String, IconData, String, Widget, CareScene)>[
-      (
-        'Health profile',
-        Icons.person_outline,
-        'Core demographics, allergies and known conditions.',
-        const HealthProfileScreen(),
-        careScenes[4],
-      ),
-      (
-        'Labs & diagnostics',
-        Icons.biotech_outlined,
-        'Longitudinal laboratory results and trends.',
-        const LabsScreen(),
-        careScenes[5],
-      ),
-      (
-        'Chronic & maternal care',
-        Icons.favorite_outline,
-        'Diabetes, hypertension, asthma, cardiovascular, maternal and child pathways.',
-        const CareProgramsScreen(),
-        careScenes[0],
-      ),
-      (
-        'Family & caregivers',
-        Icons.group_outlined,
-        'Granular caregiver permissions without exposing the whole record.',
-        const CaregiverScreen(),
-        careScenes[4],
-      ),
-      (
-        'Insurance',
-        Icons.shield_outlined,
-        'Eligibility, benefits and preauthorization adapter.',
-        const InsuranceScreen(),
-        careScenes[1],
-      ),
-      (
-        'Preventive care',
-        Icons.event_available_outlined,
-        'Clinically configured screening, vaccination and check-up reminders.',
-        const PreventiveScreen(),
-        careScenes[2],
-      ),
-      (
-        'Safety tips',
-        Icons.health_and_safety_outlined,
-        'WHO, CDC, Kenya Red Cross and IFRC guidance for health, emergencies and outbreaks.',
-        const SafetyTipsScreen(),
-        careScenes[0],
-      ),
-      (
-        'Nutrition & activity',
-        Icons.restaurant_outlined,
-        'Sokonis grocery intelligence, meals, activity and sleep on the same record.',
-        const WellnessScreen(),
-        careScenes[3],
-      ),
-    ];
-
-    return CustomScrollView(
-      slivers: [
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                StaggerIn(
-                  index: 0,
-                  child: Text(
-                    'More of the same record.',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: HulkaLook.ink),
-                  ),
-                ),
-                SizedBox(height: 6),
-                StaggerIn(
-                  index: 1,
-                  child: Text(
-                    'Labs, family, insurance and prevention sit on the same consent spine.',
-                    style: TextStyle(color: HulkaLook.atrium, height: 1.35),
-                  ),
-                ),
-              ],
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 1100),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Your health, connected.',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w600,
+                height: 1.15,
+                color: HulkaLook.ink,
+              ),
             ),
-          ),
-        ),
-        const SliverToBoxAdapter(child: CoverflowCarousel(height: 240)),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-          sliver: SliverList.builder(
-            itemCount: modules.length,
-            itemBuilder: (context, i) {
-              final m = modules[i];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: StaggerIn(
-                  index: i,
-                  child: Tilt3D(
-                    maxTilt: 0.1,
-                    child: PressScale(
-                      onTap: () => open(context, m.$4),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(22),
-                        child: SizedBox(
-                          height: 132,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              ScenePhoto(scene: m.$5, alignment: Alignment.center),
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    colors: [
-                                      HulkaLook.ink.withValues(alpha: 0.82),
-                                      HulkaLook.ink.withValues(alpha: 0.28),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(18),
-                                child: Row(
-                                  children: [
-                                    Icon(m.$2, color: HulkaLook.copper),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            m.$1,
-                                            style: const TextStyle(
-                                              color: HulkaLook.linen,
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            m.$3,
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: HulkaLook.linen.withValues(alpha: 0.86),
-                                              height: 1.3,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const Icon(Icons.chevron_right, color: HulkaLook.copper),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+            const SizedBox(height: 10),
+            const Text(
+              'Manage your record, find support and plan your next steps.',
+              style: TextStyle(
+                fontFamily: 'Segoe UI',
+                fontSize: 16,
+                color: HulkaLook.atrium,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 28),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 680 ? 2 : 1;
+                final width =
+                    (constraints.maxWidth - (columns - 1) * 16) / columns;
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    for (var i = 0; i < modules.length; i++)
+                      SizedBox(
+                        width: width,
+                        child: _ModuleTile(
+                          title: modules[i].$1,
+                          icon: modules[i].$2,
+                          description: modules[i].$3,
+                          onTap: () => open(context, i),
                         ),
                       ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _ModuleTile extends StatelessWidget {
+  const _ModuleTile({
+    required this.title,
+    required this.icon,
+    required this.description,
+    required this.onTap,
+  });
+  final String title;
+  final IconData icon;
+  final String description;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+    color: HulkaLook.paper,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+      side: BorderSide(color: HulkaLook.atrium.withValues(alpha: .14)),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: HulkaLook.pulse.withValues(alpha: .10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: const Color(0xFF0E6F6A), size: 25),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: HulkaLook.ink,
+                      height: 1.25,
                     ),
                   ),
-                ),
-              );
-            },
-          ),
+                  const SizedBox(height: 7),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      fontFamily: 'Segoe UI',
+                      fontSize: 14,
+                      height: 1.5,
+                      color: HulkaLook.atrium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, size: 21, color: Color(0xFF0E6F6A)),
+          ],
         ),
-      ],
-    );
-  }
+      ),
+    ),
+  );
 }

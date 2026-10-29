@@ -1,8 +1,9 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../ui/health_workspace.dart';
 
 import '../../services/bima_guardian_insurance.dart';
 import '../../services/functions_service.dart';
@@ -57,7 +58,9 @@ class _InsuranceScreenState extends State<InsuranceScreen> {
     try {
       final r = await api.insuranceEligibility();
       setState(
-          () => message = (r['message'] as String?) ?? 'Eligibility response received.');
+        () => message =
+            (r['message'] as String?) ?? 'Eligibility response received.',
+      );
     } catch (e) {
       setState(() => message = 'Eligibility check failed: $e');
     } finally {
@@ -81,10 +84,7 @@ class _InsuranceScreenState extends State<InsuranceScreen> {
       setState(() => bimaResult = 'Gateway URL must be a valid HTTPS address.');
       return null;
     }
-    return BimaGuardianInsuranceClient(
-      gateway: uri,
-      userAccessToken: _idToken,
-    );
+    return BimaGuardianInsuranceClient(gateway: uri, userAccessToken: _idToken);
   }
 
   String _prettyJson(Map<String, dynamic> m) {
@@ -276,50 +276,63 @@ class _InsuranceScreenState extends State<InsuranceScreen> {
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return const Center(child: Text('Authentication required.'));
+    if (uid == null) {
+      return const Center(child: Text('Authentication required.'));
+    }
 
-    return ListView(
-      padding: const EdgeInsets.all(20),
+    return HealthPageBody(
       children: [
         // â”€â”€ Section 1: Coverage form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Text('Insurance', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 8),
         const Text(
-          'Store your coverage reference and connect eligibility/preauthorization when an insurer API is configured.',
+          'Keep your coverage details handy and check the services available through your insurer.',
         ),
         const SizedBox(height: 16),
-        TextField(
-          controller: insurerId,
-          decoration: const InputDecoration(labelText: 'Insurer ID'),
+        HulkaBoard(
+          title: 'Your coverage',
+          subtitle: 'Keep your insurer and membership details together.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: insurerId,
+                decoration: const InputDecoration(labelText: 'Insurer ID'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: plan,
+                decoration: const InputDecoration(labelText: 'Plan name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: memberRef,
+                decoration: const InputDecoration(
+                  labelText: 'Member reference',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton(
+                    onPressed: busy ? null : save,
+                    child: const Text('Save coverage'),
+                  ),
+                  OutlinedButton(
+                    onPressed: busy ? null : checkEligibility,
+                    child: const Text('Check eligibility'),
+                  ),
+                ],
+              ),
+              if (message != null) ...[
+                const SizedBox(height: 12),
+                Text(message!),
+              ],
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: plan,
-          decoration: const InputDecoration(labelText: 'Plan name'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: memberRef,
-          decoration: const InputDecoration(labelText: 'Member reference'),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          children: [
-            FilledButton(
-              onPressed: busy ? null : save,
-              child: const Text('Save coverage'),
-            ),
-            OutlinedButton(
-              onPressed: busy ? null : checkEligibility,
-              child: const Text('Check eligibility'),
-            ),
-          ],
-        ),
-        if (message != null) ...[
-          const SizedBox(height: 12),
-          Text(message!),
-        ],
 
         // â”€â”€ Section 2: Bima Guardian Connect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const SizedBox(height: 28),
@@ -358,7 +371,9 @@ class _InsuranceScreenState extends State<InsuranceScreen> {
               // Member reference is shared with Section 1 controller
               TextField(
                 controller: memberRef,
-                decoration: const InputDecoration(labelText: 'Member Reference'),
+                decoration: const InputDecoration(
+                  labelText: 'Member Reference',
+                ),
               ),
               const SizedBox(height: 14),
               Wrap(
@@ -371,17 +386,26 @@ class _InsuranceScreenState extends State<InsuranceScreen> {
                     label: const Text('Get quote'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: bimabusy ? null : () => _getBenefitBalance(context, uid),
-                    icon: const Icon(Icons.account_balance_wallet_outlined, size: 18),
+                    onPressed: bimabusy
+                        ? null
+                        : () => _getBenefitBalance(context, uid),
+                    icon: const Icon(
+                      Icons.account_balance_wallet_outlined,
+                      size: 18,
+                    ),
                     label: const Text('Benefit balance'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: bimabusy ? null : () => _preauthorize(context, uid),
+                    onPressed: bimabusy
+                        ? null
+                        : () => _preauthorize(context, uid),
                     icon: const Icon(Icons.assignment_outlined, size: 18),
                     label: const Text('Pre-authorize'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: bimabusy ? null : () => _claimsHistory(context, uid),
+                    onPressed: bimabusy
+                        ? null
+                        : () => _claimsHistory(context, uid),
                     icon: const Icon(Icons.history_outlined, size: 18),
                     label: const Text('Claims history'),
                   ),
@@ -422,8 +446,19 @@ class _InsuranceScreenState extends State<InsuranceScreen> {
               .where('patientId', isEqualTo: uid)
               .snapshots(),
           builder: (context, snap) {
-            if (!snap.hasData || snap.data!.docs.isEmpty) {
-              return const Text('No coverage saved.');
+            if (snap.hasError) {
+              return const Text(
+                'Saved coverage could not be loaded. Try again later.',
+              );
+            }
+            if (!snap.hasData) return const LinearProgressIndicator();
+            if (snap.data!.docs.isEmpty) {
+              return const HealthEmptyState(
+                icon: Icons.shield_outlined,
+                title: 'No coverage saved',
+                message:
+                    'Add your insurer, plan and member reference above to keep them on your record.',
+              );
             }
             return Column(
               children: snap.data!.docs.map((doc) {

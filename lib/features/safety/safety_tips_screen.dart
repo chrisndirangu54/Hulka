@@ -6,7 +6,9 @@ import '../../ui/hulka_board.dart';
 import '../../ui/hulka_look.dart';
 
 class SafetyTipsScreen extends StatefulWidget {
-  const SafetyTipsScreen({super.key});
+  const SafetyTipsScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<SafetyTipsScreen> createState() => _SafetyTipsScreenState();
@@ -32,12 +34,20 @@ class _SafetyTipsScreenState extends State<SafetyTipsScreen> {
       children: [
         const Text(
           'Safety from the agencies that publish it.',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600, color: HulkaLook.ink, height: 1.15),
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w600,
+            color: HulkaLook.ink,
+            height: 1.15,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           SafetyTipsCatalog.disclaimer,
-          style: TextStyle(color: HulkaLook.atrium.withValues(alpha: 0.95), height: 1.4),
+          style: TextStyle(
+            color: HulkaLook.atrium.withValues(alpha: 0.95),
+            height: 1.4,
+          ),
         ),
         const SizedBox(height: 14),
         Wrap(
@@ -77,7 +87,10 @@ class _SafetyTipsScreenState extends State<SafetyTipsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tip.body, style: const TextStyle(color: HulkaLook.ink, height: 1.4)),
+                Text(
+                  tip.body,
+                  style: const TextStyle(color: HulkaLook.ink, height: 1.4),
+                ),
                 const SizedBox(height: 10),
                 TextButton(
                   onPressed: () => _open(tip.sourceUrl),
@@ -91,7 +104,7 @@ class _SafetyTipsScreenState extends State<SafetyTipsScreen> {
       ],
     );
 
-    if (!canPop) return body;
+    if (!canPop || widget.embedded) return body;
     return Scaffold(
       backgroundColor: HulkaLook.linen,
       appBar: AppBar(title: const Text('Safety tips')),
