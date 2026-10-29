@@ -120,11 +120,12 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
       final batch = FirebaseFirestore.instance.batch();
       final collection = FirebaseFirestore.instance.collection('patients').doc(id).collection('timeline');
       final receipt = const Uuid().v4();
+      const allowedKinds = {'appointment', 'encounter', 'prescription', 'labReport', 'labTest', 'diagnosis', 'observation', 'procedure'};
       for (final raw in entries) {
         if (raw is! Map<String, dynamic>) throw const FormatException('Invalid clinical record.');
         final title = raw['title'];
         final kind = raw['kind'];
-        if (title is! String || title.isEmpty || title.length > 200 || kind is! String || kind.length > 80) {
+        if (title is! String || title.isEmpty || title.length > 200 || kind is! String || !allowedKinds.contains(kind)) {
           throw const FormatException('Malformed clinical record.');
         }
         batch.set(collection.doc(), {
@@ -132,6 +133,7 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
           'sourceSystem': 'TeknTandao Workspace',
           'sourceOrganizationId': (payload['organizationId'] ?? '').toString(),
           'importReceipt': receipt,
+          'sourceEventId': (raw['id'] ?? '').toString().substring(0, (raw['id'] ?? '').toString().length.clamp(0, 128)),
           'provenance': 'patientSuppliedExport',
           'reviewStatus': 'unverified',
           'occurredAt': FieldValue.serverTimestamp(),
