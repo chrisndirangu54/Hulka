@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:convert';
 import '../../ui/health_workspace.dart';
 
 /// Patient-owned document intake. External hospital links are requests only:
@@ -91,6 +92,61 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
     }
   }
 
+
+  Future<void> importExportFile() async {
+    final id = uid;
+    if (id == null || !consent) {
+      setState(() => status = 'Confirm authorization before importing.');
+      return;
+    }
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom, allowedExtensions: ['json'], withData: true);
+    if (picked == null || picked.files.isEmpty) return;
+    final file = picked.files.single;
+    if (file.bytes == null || file.size > 1024 * 1024) {
+      setState(() => status = 'Select a hospital JSON export smaller than 1 MB.');
+      return;
+    }
+    setState(() { busy = true; status = null; });
+    try {
+      final payload = jsonDecode(utf8.decode(file.bytes!));
+      if (payload is! Map<String, dynamic> ||
+          payload['schema'] != 'hulka.hospital-history.v1' ||
+          payload['source'] != 'TeknTandao Workspace' ||
+          payload['records'] is! List) {
+        throw const FormatException('Unsupported hospital export.');
+      }
+      final entries = payload['records'] as List;
+      if (entries.length > 100) throw const FormatException('Export exceeds 100 records.');
+      final batch = FirebaseFirestore.instance.batch();
+      final collection = FirebaseFirestore.instance.collection('patients').doc(id).collection('timeline');
+      final receipt = const Uuid().v4();
+      for (final raw in entries) {
+        if (raw is! Map<String, dynamic>) throw const FormatException('Invalid clinical record.');
+        final title = raw['title'];
+        final kind = raw['kind'];
+        if (title is! String || title.isEmpty || title.length > 200 || kind is! String || kind.length > 80) {
+          throw const FormatException('Malformed clinical record.');
+        }
+        batch.set(collection.doc(), {
+          'title': title, 'summary': kind, 'type': 'importedHospitalHistory',
+          'sourceSystem': 'TeknTandao Workspace',
+          'sourceOrganizationId': (payload['organizationId'] ?? '').toString(),
+          'importReceipt': receipt,
+          'provenance': 'patientSuppliedExport',
+          'reviewStatus': 'unverified',
+          'occurredAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+      if (mounted) setState(() => status = 'Imported ${entries.length} summary records as unverified patient-provided history. A clinician must reconcile them.');
+    } catch (_) {
+      if (mounted) setState(() => status = 'Invalid export, or import failed. No records were confirmed.');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (uid == null) return const Center(child: Text('Sign in to access records.'));
@@ -118,6 +174,9 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
           title: const Text('I authorize Hulka to request verification of my identity and an appropriately scoped medical-record transfer from this hospital.'),
         ),
         FilledButton(onPressed: busy || !consent ? null : requestImport, child: const Text('Request authorized import')),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(onPressed: busy || !consent ? null : importExportFile, icon: const Icon(Icons.file_download_outlined), label: const Text('Import hospital JSON export')),
+        const Text('Manual import is available; this is not an automatic hospital connection. Imported summaries require clinical verification.'),
         if (status != null) Padding(padding: const EdgeInsets.only(top: 14), child: Text(status!)),
         const SizedBox(height: 24),
         StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(
