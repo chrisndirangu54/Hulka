@@ -33,7 +33,7 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
   Future<void> upload() async {
     final id = uid;
     if (id == null) return;
-    final picked = await FilePicker.platform.pickFiles(
+    final picked = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
       withData: true,
@@ -99,7 +99,7 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
       setState(() => status = 'Confirm authorization before importing.');
       return;
     }
-    final picked = await FilePicker.platform.pickFiles(
+    final picked = await FilePicker.pickFiles(
       type: FileType.custom, allowedExtensions: ['json'], withData: true);
     if (picked == null || picked.files.isEmpty) return;
     final file = picked.files.single;
