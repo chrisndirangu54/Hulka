@@ -16,6 +16,7 @@ import '../pharmacy/pharmacy_screen.dart';
 import '../telemedicine/telemedicine_screen.dart';
 import '../timeline/timeline_screen.dart';
 import '../wearables/wearables_screen.dart';
+import '../wearables/activity_insights_screen.dart';
 import '../wellness/wellness_screen.dart';
 import '../preventive/preventive_screen.dart';
 import '../timeline/patient_records_screen.dart';
@@ -51,6 +52,7 @@ class _AppShellState extends State<AppShell> {
       const _Destination('Telemedicine', Icons.video_call_outlined, TelemedicineScreen()),
       const _Destination('Pharmacy', Icons.local_pharmacy_outlined, PharmacyScreen()),
       const _Destination('Wearables', Icons.watch_outlined, WearablesScreen()),
+      const _Destination('Activity insights', Icons.directions_run_outlined, ActivityInsightsScreen()),
       const _Destination('AI Copilot', Icons.auto_awesome_outlined, AiCopilotScreen()),
       const _Destination('Care network', Icons.local_hospital_outlined, HospitalDirectoryScreen()),
       const _Destination('Emergency', Icons.emergency_outlined, EmergencyScreen()),
