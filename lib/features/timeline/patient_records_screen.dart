@@ -36,10 +36,9 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
     final picked = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      withData: true,
     );
-    if (picked == null || picked.files.isEmpty) return;
-    final file = picked.files.single;
+    if (picked == null || picked.isEmpty) return;
+    final file = picked.single;
     if (file.bytes == null || file.size > 10 * 1024 * 1024) {
       setState(() => status = 'Select a document smaller than 10 MB.');
       return;
@@ -100,9 +99,9 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
       return;
     }
     final picked = await FilePicker.pickFiles(
-      type: FileType.custom, allowedExtensions: ['json'], withData: true);
-    if (picked == null || picked.files.isEmpty) return;
-    final file = picked.files.single;
+      type: FileType.custom, allowedExtensions: ['json']);
+    if (picked == null || picked.isEmpty) return;
+    final file = picked.single;
     if (file.bytes == null || file.size > 1024 * 1024) {
       setState(() => status = 'Select a hospital JSON export smaller than 1 MB.');
       return;
