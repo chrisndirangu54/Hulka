@@ -70,6 +70,22 @@ service cloud.firestore {
       allow create, update: if sameUser(patientId);
       allow delete: if false;
 
+      match /importRequests/{requestId} {
+        allow read: if sameUser(patientId);
+        allow create: if sameUser(patientId)
+          && request.resource.data.patientId == patientId
+          && request.resource.data.sourceSystem == 'TeknTandao Workspace'
+          && request.resource.data.status == 'pendingVerification'
+          && request.resource.data.consentAcknowledged == true
+          && request.resource.data.hospitalName is string
+          && request.resource.data.hospitalName.size() > 0
+          && request.resource.data.hospitalName.size() <= 180
+          && request.resource.data.externalPatientId is string
+          && request.resource.data.externalPatientId.size() > 0
+          && request.resource.data.externalPatientId.size() <= 120;
+        allow update, delete: if false;
+      }
+
       match /timeline/{eventId} {
         allow read: if sameUser(patientId) || (signedIn() && hasConsent(patientId, 'patient.timeline.read'));
         allow create: if sameUser(patientId) || (signedIn() && hasConsent(patientId, 'patient.timeline.write'));
