@@ -88,8 +88,13 @@ service cloud.firestore {
 
       match /timeline/{eventId} {
         allow read: if sameUser(patientId) || (signedIn() && hasConsent(patientId, 'patient.timeline.read'));
-        allow create: if sameUser(patientId) || (signedIn() && hasConsent(patientId, 'patient.timeline.write'));
-        allow update: if signedIn() && hasConsent(patientId, 'patient.timeline.write');
+        allow create: if (sameUser(patientId)
+          && request.resource.data.type in ['patientDocument', 'importedHospitalHistory']
+          && request.resource.data.reviewStatus == 'unverified'
+          && request.resource.data.provenance in ['patientUpload', 'patientSuppliedExport'])
+          || (signedIn() && hasConsent(patientId, 'patient.timeline.write')
+          && request.resource.data.type != 'importedHospitalHistory');
+        allow update: if false; // Reconciliation uses checked Cloud Function only
         allow delete: if false;
       }
 
