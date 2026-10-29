@@ -19,6 +19,7 @@ class DeviceHealthService {
 
   static const readableTypes = <HealthDataType>[
     HealthDataType.STEPS,
+    HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.HEART_RATE,
     HealthDataType.RESTING_HEART_RATE,
     HealthDataType.HEART_RATE_VARIABILITY_SDNN,
@@ -60,6 +61,7 @@ class DeviceHealthService {
       batch.set(ref, {
         'healthType': p.type.name,
         'value': value,
+        'numericValue': p.value is NumericHealthValue ? (p.value as NumericHealthValue).numericValue : null,
         'unit': p.unit.name,
         'dateFrom': p.dateFrom.toUtc().toIso8601String(),
         'dateTo': p.dateTo.toUtc().toIso8601String(),
