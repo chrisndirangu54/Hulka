@@ -1,0 +1,90 @@
+Flutter crash report.
+Please report a bug at https://github.com/flutter/flutter/issues.
+
+## command
+
+flutter test --suppress-analytics
+
+## exception
+
+PathAccessException: PathAccessException: Cannot open file, path = 'C:\Users\Admin\Hulka\assets\images\care.jpg' (OS Error: The process cannot access the file because it is being used by another process, errno = 32)
+
+```
+#0      _File.throwIfError (dart:io/file_impl.dart:783:7)
+#1      _File.openSync (dart:io/file_impl.dart:576:5)
+#2      ForwardingFile.openSync (package:file/src/forwarding/forwarding_file.dart:74:16)
+#3      ErrorHandlingFile.copySync.<anonymous closure> (package:flutter_tools/src/base/error_handling_io.dart:292:22)
+#4      _runSync (package:flutter_tools/src/base/error_handling_io.dart:552:14)
+#5      ErrorHandlingFile.copySync (package:flutter_tools/src/base/error_handling_io.dart:291:5)
+#6      writeBundle.<anonymous closure> (package:flutter_tools/src/bundle_builder.dart:215:19)
+<asynchronous suspension>
+#7      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#8      writeBundle (package:flutter_tools/src/bundle_builder.dart:171:3)
+<asynchronous suspension>
+#9      TestCommand._buildTestAsset (package:flutter_tools/src/commands/test.dart:777:7)
+<asynchronous suspension>
+#10     TestCommand.runCommand (package:flutter_tools/src/commands/test.dart:474:7)
+<asynchronous suspension>
+#11     FlutterCommand.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command.dart:1559:27)
+<asynchronous suspension>
+#12     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#13     CommandRunner.runCommand (package:args/command_runner.dart:212:13)
+<asynchronous suspension>
+#14     FlutterCommandRunner.runCommand.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:487:9)
+<asynchronous suspension>
+#15     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#16     FlutterCommandRunner.runCommand (package:flutter_tools/src/runner/flutter_command_runner.dart:422:5)
+<asynchronous suspension>
+#17     run.<anonymous closure>.<anonymous closure> (package:flutter_tools/runner.dart:104:11)
+<asynchronous suspension>
+#18     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#19     main (package:flutter_tools/executable.dart:103:3)
+<asynchronous suspension>
+```
+
+## flutter doctor
+
+```
+[✓] Flutter (Channel stable, 3.38.8, on Microsoft Windows [Version 10.0.26200.9711], locale en-US) [1,231ms]
+    • Flutter version 3.38.8 on channel stable at C:\Users\Admin\flutter\flutter
+    • Upstream repository https://github.com/flutter/flutter.git
+    • Framework revision bd7a4a6b55 (9 months ago), 2026-01-26 15:21:03 -0800
+    • Engine revision db373eb85a
+    • Dart version 3.10.7
+    • DevTools version 2.51.1
+    • Feature flags: enable-web, enable-linux-desktop, enable-macos-desktop, enable-windows-desktop, enable-android, enable-ios, cli-animations, enable-native-assets, omit-legacy-version-file, enable-lldb-debugging
+
+[✓] Windows Version (Windows 11 or higher, 25H2, 2009) [4.1s]
+
+[!] Android toolchain - develop for Android devices (Android SDK version 36.1.0) [34.4s]
+    • Android SDK at C:\Users\Admin\AppData\Local\Android\sdk
+    • Emulator version 36.6.11.0 (build_id 15507667) (CL:N/A)
+    • Platform android-36.1, build-tools 36.1.0
+    • Java binary at: C:\Program Files\Android\Android Studio\jbr\bin\java
+      This is the JDK bundled with the latest Android Studio installation on this machine.
+      To manually set the JDK path, use: `flutter config --jdk-dir="path/to/jdk"`.
+    • Java version OpenJDK Runtime Environment (build 21.0.10+-14961533-b1163.108)
+    ! Some Android licenses not accepted. To resolve this, run: flutter doctor --android-licenses
+
+[✓] Chrome - develop for the web [541ms]
+    • Chrome at C:\Program Files\Google\Chrome\Application\chrome.exe
+
+[✓] Visual Studio - develop Windows apps (Visual Studio Build Tools 2022 17.14.27 (February 2026)) [538ms]
+    • Visual Studio at C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools
+    • Visual Studio Build Tools 2022 version 17.14.37012.4
+    • Windows 10 SDK version 10.0.26100.0
+
+[✓] Connected device (3 available) [627ms]
+    • Windows (desktop) • windows • windows-x64    • Microsoft Windows [Version 10.0.26200.9711]
+    • Chrome (web)      • chrome  • web-javascript • Google Chrome 155.0.8059.84
+    • Edge (web)        • edge    • web-javascript • Microsoft Edge 156.0.4314.50
+
+[✓] Network resources [2.2s]
+    • All expected network resources are available.
+
+! Doctor found issues in 1 category.
+```
