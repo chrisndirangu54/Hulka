@@ -1,8 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:convert';
 import '../../ui/health_workspace.dart';
 import '../../ui/hulka_board.dart';
+import '../timeline/patient_records_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/functions_service.dart';
 
 class PreventiveScreen extends StatefulWidget {
@@ -71,6 +75,11 @@ class _PreventiveScreenState extends State<PreventiveScreen> {
           'See screenings, vaccinations and follow-ups recommended for your record. Recommendations require a clinically reviewed care plan.',
         ),
         const SizedBox(height: 16),
+        ClipRRect(borderRadius: BorderRadius.circular(20),
+          child: SizedBox(height: 180, width: double.infinity,
+            child: Image.asset('assets/images/care.jpg', fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(Icons.health_and_safety, size: 64)))),
+        const SizedBox(height: 16),
         HulkaBoard(
           title: 'Check what is due',
           subtitle:
@@ -87,6 +96,58 @@ class _PreventiveScreenState extends State<PreventiveScreen> {
           ),
         ),
         if (message != null) ...[const SizedBox(height: 12), Text(message!)],
+        const SizedBox(height: 20),
+        FutureBuilder<String>(
+          future: rootBundle.loadString('assets/preventive/curated_catalog_v1.json'),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final data = jsonDecode(snapshot.data!) as Map<String, dynamic>;
+            final packages = data['packages'] as List<dynamic>;
+            return HulkaBoard(
+              title: 'Preventive-care packages',
+              subtitle: 'Educational drafts only. Clinical approval is required before personal recommendations.',
+              child: Column(children: [
+                for (final item in packages)
+                  ListTile(
+                    leading: const Icon(Icons.health_and_safety_outlined),
+                    title: Text(item['name'].toString()),
+                    subtitle: Text((item['topics'] as List<dynamic>).join(' • ')),
+                  ),
+              ]),
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        HulkaBoard(
+          title: 'Trusted preventive-care library',
+          subtitle: 'Educational references, not individualized prescriptions. Kenyan care pathways require locally approved clinical rules.',
+          child: Column(children: [
+            for (final source in const [
+              ('WHO', 'Global immunization and preventive healthcare', 'https://www.who.int/health-topics/vaccines-and-immunization'),
+              ('Kenya Ministry of Health', 'National vaccination services and records', 'https://portal.health.go.ke/dashboard/vaccination-schedule'),
+              ('CDC', 'Adult vaccination guidance (US-specific)', 'https://www.cdc.gov/vaccines/hcp/imz-schedules/adult-age.html'),
+              ('Red Cross', 'First aid and emergency preparedness', 'https://www.redcross.org/take-a-class/first-aid'),
+            ])
+              ListTile(
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text(source.$1), subtitle: Text(source.$2),
+                trailing: const Icon(Icons.open_in_new, size: 18),
+                onTap: () => launchUrl(Uri.parse(source.$3), mode: LaunchMode.externalApplication),
+              ),
+          ]),
+        ),
+        const SizedBox(height: 16),
+        HulkaBoard(
+          title: 'Your history, ready for your next doctor',
+          subtitle: 'Save consultation documents or request a verified hospital import from TeknTandao Workspace.',
+          child: Align(alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => const PatientRecordsScreen())),
+              icon: const Icon(Icons.folder_shared_outlined),
+              label: const Text('Manage medical records'),
+            )),
+        ),
         const SizedBox(height: 24),
         StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: tasks,

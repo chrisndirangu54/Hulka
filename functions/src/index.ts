@@ -640,6 +640,43 @@ export const verifyProviderAccount = onCall(async (request) => {
 });
 
 
+/**
+ * Clinician-only reconciliation of patient-supplied history.
+ * Reviewers must have verified clinical roles and active patient consent.
+ */
+export const reconcileImportedHistory = onCall(async request => {
+  const clinicianId = requireAuth(request.auth);
+  await requireRole(clinicianId, ["clinician"]);
+  const patientId = String(request.data?.patientId ?? "");
+  const eventId = String(request.data?.eventId ?? "");
+  const outcome = String(request.data?.outcome ?? "");
+  const note = String(request.data?.note ?? "").trim();
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(patientId) ||
+      !/^[A-Za-z0-9_-]{1,128}$/.test(eventId) ||
+      !["verified", "rejected"].includes(outcome) || note.length < 10 ||
+      note.length > 2000) {
+    throw new HttpsError("invalid-argument", "Valid patient, event, outcome and review rationale required");
+  }
+  if (!(await activeConsent(patientId, clinicianId, ["patient.timeline.read", "patient.timeline.write"]))) {
+    throw new HttpsError("permission-denied", "Current patient consent required");
+  }
+  const ref = db.collection("patients").doc(patientId).collection("timeline").doc(eventId);
+  await db.runTransaction(async tx => {
+    const entry = await tx.get(ref);
+    const data = entry.data();
+    if (!data || !["patientDocument", "importedHospitalHistory"].includes(data.type)) {
+      throw new HttpsError("failed-precondition", "Patient-submitted event not found");
+    }
+    if (data.reviewStatus !== "unverified") {
+      throw new HttpsError("failed-precondition", "Entry has already been reviewed");
+    }
+    tx.update(ref, {reviewStatus: outcome, reviewedBy: clinicianId,
+      reviewNote: note, reviewedAt: FieldValue.serverTimestamp()});
+  });
+  await audit(clinicianId, "clinical.history.reconcile", {patientId, eventId, outcome});
+  return {ok: true, reviewStatus: outcome};
+});
+
 export const evaluatePreventiveCare = onCall(async (request) => {
   const uid = requireAuth(request.auth);
   const patient = await db.collection("patients").doc(uid).get();
@@ -670,6 +707,22 @@ export const evaluatePreventiveCare = onCall(async (request) => {
     }
   }
 
+  // Never execute draft or unapproved clinical rule packs.
+  if (rulePack.data()?.status !== "clinicallyApproved" || !rulePack.data()?.reviewedBy ||
+      !rulePack.data()?.version) {
+    return { configured: false, generated: 0,
+      message: "A versioned, clinician-approved preventive rule pack is required." };
+  }
+
+  const approvedAt = rulePack.data()?.approvedAt?.toDate?.();
+  const expiresAt = rulePack.data()?.expiresAt?.toDate?.();
+  if (!approvedAt || !expiresAt || approvedAt.getTime() > Date.now() ||
+      expiresAt.getTime() <= Date.now() ||
+      rulePack.data()?.countryCode !== (profile.countryCode ?? "KE")) {
+    return {configured: false, generated: 0,
+      message: "No current, locally approved clinical protocol is available for this profile."};
+  }
+
   let generated = 0;
   for (const raw of rules) {
     const rule = raw as Record<string, unknown>;
@@ -680,7 +733,18 @@ export const evaluatePreventiveCare = onCall(async (request) => {
 
     if (minAge !== null && (age === null || age < minAge)) continue;
     if (maxAge !== null && (age === null || age > maxAge)) continue;
-    if (sex && patientSex && sex !== patientSex) continue;
+    if (sex && (!patientSex || sex.toLowerCase() !== patientSex.toLowerCase())) continue;
+    const requiredConditions = Array.isArray(rule.conditions)
+      ? rule.conditions.map(String).map(s => s.toLowerCase()) : [];
+    const patientConditions = Array.isArray(profile.conditions)
+      ? profile.conditions.map(String).map(s => s.toLowerCase()) : [];
+    if (requiredConditions.length && !requiredConditions.some(c => patientConditions.includes(c))) continue;
+    const excludedConditions = Array.isArray(rule.excludeConditions)
+      ? rule.excludeConditions.map(String).map(s => s.toLowerCase()) : [];
+    if (excludedConditions.some(c => patientConditions.includes(c))) continue;
+    if (rule.countryCode && rule.countryCode !== (profile.countryCode ?? "KE")) continue;
+    if (rule.clinicallyApproved !== true || !rule.source || !rule.sourceUrl) continue;
+    if (typeof rule.sourceUrl !== "string" || !rule.sourceUrl.startsWith("https://")) continue;
 
     const ruleId = String(rule.id ?? "");
     const title = String(rule.title ?? "");
@@ -692,7 +756,10 @@ export const evaluatePreventiveCare = onCall(async (request) => {
       ruleId,
       title,
       description: rule.description ?? null,
-      source: rule.source ?? null,
+      source: rule.source,
+      sourceUrl: rule.sourceUrl,
+      reviewStatus: "requiresClinicianConfirmation",
+      rationale: "Matched clinically reviewed age, sex and condition criteria",
       status: "due",
       generatedAt: FieldValue.serverTimestamp(),
       rulePackVersion: rulePack.data()?.version ?? null,

@@ -2,7 +2,11 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /patients/{patientId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == patientId;
+      allow read: if request.auth != null && request.auth.uid == patientId;
+      allow create: if request.auth != null && request.auth.uid == patientId
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in ['application/pdf', 'image/png', 'image/jpeg'];
+      allow update, delete: if false;
     }
     match /prescriptionUploads/{patientId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == patientId;
