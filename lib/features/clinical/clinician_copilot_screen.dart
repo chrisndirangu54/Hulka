@@ -9,24 +9,39 @@ class ClinicianCopilotScreen extends StatefulWidget {
 class _ClinicianCopilotScreenState extends State<ClinicianCopilotScreen> {
   final patient = TextEditingController();
   final question = TextEditingController();
+  final evidenceQuery = TextEditingController();
+  final Set<String> evidenceIds = {};
+  List<Map<String, dynamic>> evidenceResults = [];
   final api = HulkaFunctions();
   String task = 'questions', model = 'medgemma-1.5-4b';
   String result = 'Clinician-only research assistance. No diagnosis or prescriptions.';
   bool busy = false;
   @override
-  void dispose() {patient.dispose();question.dispose();super.dispose();}
+  void dispose() {patient.dispose();question.dispose();evidenceQuery.dispose();super.dispose();}
+  Future<void> findEvidence() async {
+    if (evidenceQuery.text.trim().length < 3) return;
+    setState(() => busy = true);
+    try {
+      final r = await api.searchReviewedEvidence(evidenceQuery.text.trim());
+      if (!mounted) return;
+      setState(() => evidenceResults = ((r['references'] as List?) ?? [])
+          .whereType<Map>().map((v) => Map<String, dynamic>.from(v)).toList());
+    } catch (e) {
+      if (mounted) setState(() => result = 'Unable to search approved evidence: $e');
+    } finally {if (mounted) setState(() => busy = false);}
+  }
   Future<void> ask() async {
     setState(() => busy = true);
     try {
       final r = await api.clinicianCopilot({
         'patientId': patient.text.trim(), 'task':task,'modelId':model,
-        'question':question.text.trim(), 'evidenceIds':<String>[]
+        'question':question.text.trim(), 'evidenceIds':evidenceIds.toList()
       });
       if (!mounted) return;
       setState(() => result = r['configured'] == true
           ? '${r['response']}\n\nModel: ${(r['model'] as Map?)?['displayName']}\n'
             'Model card: ${(r['model'] as Map?)?['source']}\n'
-            'Clinical review required. No verified literature supplied.'
+            'Clinical review required. Verify all claims against the selected evidence.'
           : r['message'].toString());
     } catch (e) {
       if (mounted) setState(() => result = 'Copilot unavailable: $e');
@@ -53,6 +68,24 @@ class _ClinicianCopilotScreenState extends State<ClinicianCopilotScreen> {
         ],onChanged:(v)=>setState(()=>model=v??model)),
       TextField(controller:question,minLines:3,maxLines:6,
         decoration:const InputDecoration(labelText:'Clinical question (avoid direct identifiers)')),
+      const SizedBox(height:12),
+      TextField(controller:evidenceQuery, decoration:const InputDecoration(
+        labelText:'Search independently approved evidence')),
+      OutlinedButton(onPressed:busy?null:findEvidence, child:const Text('Find approved references')),
+      for (final evidence in evidenceResults)
+        CheckboxListTile(
+          value:evidenceIds.contains(evidence['id']),
+          onChanged:(selected) => setState(() {
+            final ref=evidence['id']?.toString() ?? '';
+            if (selected == true && evidenceIds.length < 8) {
+              evidenceIds.add(ref);
+            } else if (selected == false) {
+              evidenceIds.remove(ref);
+            }
+          }),
+          title:Text(evidence['title']?.toString() ?? 'Reviewed reference'),
+          subtitle:Text(evidence['publisher']?.toString() ?? ''),
+        ),
       const SizedBox(height:12),
       FilledButton(onPressed:busy?null:ask,child:Text(busy?'Evaluating…':'Request clinical assistance')),
       const SizedBox(height:16),
