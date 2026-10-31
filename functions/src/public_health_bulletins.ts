@@ -43,7 +43,7 @@ export const registerPublicHealthBulletin = onCall(async request=>{
  });
  return {bulletinId:ref.id,status:"pendingPublicHealthReview"};
 });
-/** Read only independent, explicitly approved bulletins; no connection to Regen Insight. */
+/** Read only independent, explicitly approved bulletins; no external analytics platform integration. */
 export const listApprovedPublicHealthBulletins = onCall(async request=>{
  if(!request.auth?.uid)throw new HttpsError("unauthenticated","Sign in required");
  const snap=await db().collection("hulkaPublicHealthBulletins")
