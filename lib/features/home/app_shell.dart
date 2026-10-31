@@ -7,6 +7,7 @@ import '../admin/admin_screen.dart';
 import '../ai/ai_copilot_screen.dart';
 import '../analytics/analytics_screen.dart';
 import '../clinical/clinician_screen.dart';
+import '../clinical/clinician_copilot_screen.dart';
 import '../clinical/clinical_intelligence_screen.dart';
 import '../consent/consent_screen.dart';
 import '../emergency/emergency_screen.dart';
@@ -62,6 +63,7 @@ class _AppShellState extends State<AppShell> {
       const _Destination('More', Icons.apps_outlined, MoreHealthScreen()),
     ];
     if (role == 'clinician') {
+      base.add(const _Destination('Clinician Copilot', Icons.psychology_alt_outlined, ClinicianCopilotScreen()));
       base.add(const _Destination(
         'Clinician',
         Icons.medical_services_outlined,
