@@ -53,7 +53,7 @@ class _ClinicianCopilotScreenState extends State<ClinicianCopilotScreen> {
       const SizedBox(height:8),
       const Text('Research-grade medical assistance. A licensed clinician must independently verify every suggestion.'),
       TextField(controller:patient,decoration:const InputDecoration(labelText:'Consented patient identifier')),
-      DropdownButtonFormField<String>(value:task,decoration:const InputDecoration(labelText:'Assist with'),
+      DropdownButtonFormField<String>(initialValue:task,decoration:const InputDecoration(labelText:'Assist with'),
         items:const [
           DropdownMenuItem(value:'questions',child:Text('Questions to ask')),
           DropdownMenuItem(value:'summary',child:Text('Summarize clinical information')),
@@ -61,7 +61,7 @@ class _ClinicianCopilotScreenState extends State<ClinicianCopilotScreen> {
           DropdownMenuItem(value:'lab_review',child:Text('Review laboratory findings')),
           DropdownMenuItem(value:'evidence_review',child:Text('Organize evidence'))
         ], onChanged:(v)=>setState(()=>task=v??task)),
-      DropdownButtonFormField<String>(value:model,decoration:const InputDecoration(labelText:'Research model'),
+      DropdownButtonFormField<String>(initialValue:model,decoration:const InputDecoration(labelText:'Research model'),
         items:const [
           DropdownMenuItem(value:'medgemma-1.5-4b',child:Text('Google MedGemma 1.5 4B')),
           DropdownMenuItem(value:'medgemma-27b',child:Text('Google MedGemma 27B'))
