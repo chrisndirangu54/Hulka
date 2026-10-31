@@ -48,3 +48,60 @@ export const searchReviewedEvidence = onCall(async request => {
       String(d.publisher).toLowerCase().includes(term)).slice(0,15);
   return {references:matches,verifiedOnly:true};
 });
+
+/** Two-person review: a second verified platform administrator can approve
+ * source provenance only after independently checking the publication.
+ * This is not clinical guideline endorsement or model accreditation.
+ */
+export const verifyEvidenceSource = onCall(async request => {
+  const uid = await requireIdentity(request.auth, ["platformAdmin"]);
+  const evidenceId = toText(request.data?.evidenceId, 128);
+  if (!/^[A-Za-z0-9_-]+$/.test(evidenceId)) {
+    throw new HttpsError("invalid-argument", "Invalid evidence ID");
+  }
+  const ref = db().collection("reviewedEvidence").doc(evidenceId);
+  await db().runTransaction(async tx => {
+    const snapshot = await tx.get(ref);
+    const data = snapshot.data();
+    if (!data) throw new HttpsError("not-found", "Reference not found");
+    if (data.addedBy === uid) throw new HttpsError("permission-denied", "Independent reviewer required");
+    if (data.clinicalApproved === true) throw new HttpsError("failed-precondition", "Already approved");
+    tx.update(ref, {
+      sourceVerified: true, provenanceReviewerId: uid,
+      sourceVerifiedAt: FieldValue.serverTimestamp(),
+      approvalStatus: "pendingClinicalReview"
+    });
+  });
+  await db().collection("auditEvents").add({
+    actorId: uid, action: "evidence.source.verify",
+    payload: {evidenceId}, createdAt: FieldValue.serverTimestamp()
+  });
+  return {evidenceId, status: "pendingClinicalReview"};
+});
+
+/** Clinical review is separate from authorship and source verification. */
+export const approveClinicalEvidence = onCall(async request => {
+  const uid = await requireIdentity(request.auth, ["clinician"]);
+  const evidenceId = toText(request.data?.evidenceId, 128);
+  if (!/^[A-Za-z0-9_-]+$/.test(evidenceId)) {
+    throw new HttpsError("invalid-argument", "Invalid evidence ID");
+  }
+  const ref = db().collection("reviewedEvidence").doc(evidenceId);
+  await db().runTransaction(async tx => {
+    const snapshot = await tx.get(ref);
+    const data = snapshot.data();
+    if (!data) throw new HttpsError("not-found", "Reference not found");
+    if (data.sourceVerified !== true) {
+      throw new HttpsError("failed-precondition", "Independent source review required");
+    }
+    if (data.addedBy === uid || data.provenanceReviewerId === uid) {
+      throw new HttpsError("permission-denied", "Independent clinical reviewer required");
+    }
+    tx.update(ref, {clinicalApproved: true, clinicalReviewerId: uid,
+      approvalStatus: "approved", clinicalReviewedAt: FieldValue.serverTimestamp()});
+  });
+  await db().collection("auditEvents").add({actorId: uid,
+    action: "evidence.clinical.approve", payload: {evidenceId},
+    createdAt: FieldValue.serverTimestamp()});
+  return {evidenceId, status:"approved"};
+});
