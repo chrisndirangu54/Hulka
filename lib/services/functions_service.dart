@@ -126,4 +126,6 @@ class HulkaFunctions {
 
   Future<Map<String, dynamic>> registerClinicalDataset(Map<String, Object?> payload) =>
       _call('registerClinicalDataset', payload);
+  Future<Map<String, dynamic>> clinicianCopilot(Map<String, Object?> payload) =>
+      _call('clinicianCopilot', payload);
 }
