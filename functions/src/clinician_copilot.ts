@@ -118,6 +118,20 @@ async request => {
     throw new HttpsError("failed-precondition",
       "Select at least one independently approved reference");
   }
+  // Per-clinician fixed-window quota: prevents accidental bulk inference and
+  // excessive requests. This is not a substitute for service-wide cost limits.
+  const windowStart = Math.floor(Date.now() / 3600000);
+  const quotaRef = db().collection("clinicalAiQuotas").doc(userId + "_" + windowStart);
+  await db().runTransaction(async tx => {
+    const snap = await tx.get(quotaRef);
+    const count = Number(snap.data()?.count ?? 0);
+    if (count >= 20) {
+      throw new HttpsError("resource-exhausted",
+        "Clinical research assistance limit reached for this hour");
+    }
+    tx.set(quotaRef, {userId, windowStart, count: count + 1,
+      expiresAt: new Date((windowStart + 2) * 3600000)}, {merge:true});
+  });
   const modelUrl = endpoint.value();
   const apiToken = token.value();
   if (!modelUrl || !apiToken || !isSafeEndpoint(modelUrl)) {
