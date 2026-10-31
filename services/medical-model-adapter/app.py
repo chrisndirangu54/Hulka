@@ -32,6 +32,16 @@ async def assist(payload: Input, authorization: str | None = Header(default=None
         authorization, "Bearer " + configured
     ):
         raise HTTPException(401, "Unauthorized")
-    # An unvalidated model is not allowed to generate patient-facing suggestions.
-    # This adapter deliberately does not download weights or forward input to third parties.
-    raise HTTPException(503, "Research model runtime not configured or clinically validated")
+    if os.environ.get("HULKA_RESEARCH_INFERENCE_ENABLED") != "true":
+        raise HTTPException(503, "Research model runtime not enabled")
+    if os.environ.get("HULKA_SYNTHETIC_ONLY") != "true":
+        raise HTTPException(503, "Synthetic-only safeguard not enabled")
+    try:
+        from inference import research_assist
+        result = research_assist(payload.modelId, payload.task,
+                                 payload.question, [r.model_dump() for r in payload.evidence],
+                                 payload.maxOutputTokens)
+        return {"response": result, "references": [],
+                "clinicalApproval": False, "researchOnly": True}
+    except Exception:
+        raise HTTPException(503, "Research inference unavailable")
