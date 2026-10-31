@@ -45,3 +45,26 @@ async def assist(payload: Input, authorization: str | None = Header(default=None
                 "clinicalApproval": False, "researchOnly": True}
     except Exception:
         raise HTTPException(503, "Research inference unavailable")
+
+class LiteratureQuery(BaseModel):
+    topic: str = Field(min_length=3, max_length=140)
+
+@app.post("/v1/research/pubmed")
+async def pubmed_search(payload: LiteratureQuery, authorization: str | None = Header(default=None)):
+    configured = os.environ.get("HULKA_MEDICAL_MODEL_TOKEN", "")
+    if not configured or not authorization or not secrets.compare_digest(
+        authorization, "Bearer " + configured
+    ):
+        raise HTTPException(401, "Unauthorized")
+    # This API accepts a public scientific TOPIC only; do not include PHI.
+    import re
+    if re.search(r"@|\\b(?:\\+?254|0)[17]\\d{8}\\b|(?:patient|nhif|passport)\\s*(?:id|number)\\s*[:#]",payload.topic,re.I):
+        raise HTTPException(422, "Personal identifiers are not allowed in PubMed searches")
+    try:
+        from pubmed import find_papers
+        return {"results":find_papers(payload.topic),"source":"NCBI PubMed",
+                "reviewStatus":"discovered_not_clinically_approved"}
+    except ValueError as error:
+        raise HTTPException(422, str(error))
+    except Exception:
+        raise HTTPException(503, "Literature search temporarily unavailable")
