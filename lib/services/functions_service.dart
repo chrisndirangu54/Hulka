@@ -110,4 +110,12 @@ class HulkaFunctions {
   ) async {
     await _call('verifyProviderAccount', payload);
   }
+  Future<Map<String, dynamic>> requestLabIntelligenceReview(String patientId, String resultId) =>
+      _call('requestLabIntelligenceReview', {'patientId': patientId, 'resultId': resultId});
+
+  Future<Map<String, dynamic>> submitSurveillanceSignal(Map<String, Object?> payload) =>
+      _call('submitSurveillanceSignal', payload);
+
+  Future<Map<String, dynamic>> registerHulkaTrainingProposal(Map<String, Object?> payload) =>
+      _call('registerHulkaTrainingProposal', payload);
 }
