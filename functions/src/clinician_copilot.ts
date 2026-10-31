@@ -85,13 +85,22 @@ async request => {
   if (!(await consent(patientId,userId))) {
     throw new HttpsError("permission-denied","Patient consent required");
   }
-  // Accept only reviewed, explicitly supplied evidence references, never invented papers.
-  const evidence = Array.isArray(request.data?.evidence) ? request.data.evidence : [];
-  if (evidence.length > 8 || evidence.some((e: unknown) =>
-    !e || typeof e !== "object" || typeof (e as any).title !== "string" ||
-    typeof (e as any).url !== "string" ||
-    !(e as any).url.startsWith("https://"))) {
-    throw new HttpsError("invalid-argument","Only verified evidence references allowed");
+  // Trust only server-validated, independently approved evidence records.
+  const evidenceIds = request.data?.evidenceIds ?? [];
+  if (!Array.isArray(evidenceIds) || evidenceIds.length > 8 ||
+      evidenceIds.some((e: unknown) => typeof e !== "string" ||
+      !/^[A-Za-z0-9_-]{1,128}$/.test(e))) {
+    throw new HttpsError("invalid-argument","Valid reviewed evidence identifiers required");
+  }
+  const evidence: Array<{title:string;url:string}> = [];
+  for (const evidenceId of evidenceIds) {
+    const record = (await db().collection("reviewedEvidence").doc(evidenceId).get()).data();
+    if (!record || record.clinicalApproved !== true ||
+        record.sourceVerified !== true || typeof record.title !== "string" ||
+        typeof record.url !== "string" || !record.url.startsWith("https://")) {
+      throw new HttpsError("failed-precondition","Evidence not independently approved");
+    }
+    evidence.push({title:record.title.slice(0,150),url:record.url.slice(0,500)});
   }
   const modelUrl = endpoint.value();
   const apiToken = token.value();
