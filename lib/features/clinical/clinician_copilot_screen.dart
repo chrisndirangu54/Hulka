@@ -20,7 +20,7 @@ class _ClinicianCopilotScreenState extends State<ClinicianCopilotScreen> {
     try {
       final r = await api.clinicianCopilot({
         'patientId': patient.text.trim(), 'task':task,'modelId':model,
-        'question':question.text.trim(), 'evidence':<Map<String,String>>[]
+        'question':question.text.trim(), 'evidenceIds':<String>[]
       });
       if (!mounted) return;
       setState(() => result = r['configured'] == true
