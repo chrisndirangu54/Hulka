@@ -40,7 +40,7 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
     if (picked.isEmpty) return;
     final file = picked.single;
     final fileSize = file.lengthSync() ?? await file.length();
-    if (fileSize == null || fileSize <= 0 || fileSize > 10 * 1024 * 1024) {
+    if (fileSize <= 0 || fileSize > 10 * 1024 * 1024) {
       if (mounted) setState(() => status = 'Select a readable document smaller than 10 MB.');
       return;
     }
@@ -109,7 +109,7 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
     if (picked == null || picked.isEmpty) return;
     final file = picked.single;
     final fileSize = file.lengthSync() ?? await file.length();
-    if (fileSize == null || fileSize <= 0 || fileSize > 1024 * 1024) {
+    if (fileSize <= 0 || fileSize > 1024 * 1024) {
       if (mounted) setState(() => status = 'Select a readable hospital JSON export smaller than 1 MB.');
       return;
     }
