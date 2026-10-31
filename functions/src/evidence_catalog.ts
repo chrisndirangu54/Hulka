@@ -105,3 +105,28 @@ export const approveClinicalEvidence = onCall(async request => {
     createdAt: FieldValue.serverTimestamp()});
   return {evidenceId, status:"approved"};
 });
+
+/** Emergency evidence withdrawal, preventing reuse by the copilot. */
+export const revokeClinicalEvidence = onCall(async request => {
+  const uid = await requireIdentity(request.auth, ["platformAdmin"]);
+  const evidenceId = toText(request.data?.evidenceId, 128);
+  const reason = toText(request.data?.reason, 400);
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(evidenceId) || !reason) {
+    throw new HttpsError("invalid-argument", "Evidence ID and withdrawal reason required");
+  }
+  const ref = db().collection("reviewedEvidence").doc(evidenceId);
+  await db().runTransaction(async tx => {
+    const snapshot = await tx.get(ref);
+    if (!snapshot.exists) throw new HttpsError("not-found", "Reference not found");
+    tx.update(ref, {
+      clinicalApproved: false, sourceVerified: false,
+      approvalStatus: "withdrawn", withdrawalReason: reason,
+      withdrawnBy: uid, withdrawnAt: FieldValue.serverTimestamp()
+    });
+  });
+  await db().collection("auditEvents").add({
+    actorId: uid, action: "evidence.withdraw", payload: {evidenceId, reason},
+    createdAt: FieldValue.serverTimestamp()
+  });
+  return {evidenceId, status: "withdrawn"};
+});
