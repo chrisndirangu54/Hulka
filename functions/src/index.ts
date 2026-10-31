@@ -957,3 +957,13 @@ export const dispatchDosageReminders = onSchedule("every 1 minutes", async () =>
     }
   }
 });
+
+export { requestLabIntelligenceReview, submitSurveillanceSignal, registerHulkaTrainingProposal } from "./clinical_intelligence";
+
+export { submitClinicalInsight, registerClinicalDataset, listClinicalInsights } from "./clinical_domains";
+
+export { clinicianCopilot } from "./clinician_copilot";
+
+export { registerReviewedEvidence, searchReviewedEvidence, verifyEvidenceSource, approveClinicalEvidence, revokeClinicalEvidence } from './evidence_catalog';
+
+export { registerPublicHealthBulletin, listApprovedPublicHealthBulletins } from "./public_health_bulletins";

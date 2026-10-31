@@ -107,8 +107,10 @@ class _ActivityInsightsScreenState extends State<ActivityInsightsScreen> {
             sourceNames.add((raw['sourceName'] ?? 'Unknown device').toString());
           }
           for (int i = 0; i < days; i++) {
-            if (samples[i] > 0) series[i] = metric == 'STEPS' || metric == 'ACTIVE_ENERGY_BURNED'
-                ? sums[i] : sums[i] / samples[i];
+            if (samples[i] > 0) {
+              series[i] = metric == 'STEPS' || metric == 'ACTIVE_ENERGY_BURNED'
+                  ? sums[i] : sums[i] / samples[i];
+            }
           }
           final observed = series.whereType<double>().toList();
           final peak = observed.isEmpty ? 1.0 : observed.reduce((a,b) => a > b ? a : b).clamp(1.0, double.infinity).toDouble();
@@ -122,7 +124,7 @@ class _ActivityInsightsScreenState extends State<ActivityInsightsScreen> {
               SizedBox(height: 170, child: Row(crossAxisAlignment: CrossAxisAlignment.end,
                 children: List.generate(days, (i) {
                   final v = series[i];
-                  return Expanded(child: Tooltip(message: v == null ? 'No measurement' : '${v.toStringAsFixed(0)}',
+                  return Expanded(child: Tooltip(message: v == null ? 'No measurement' : v.toStringAsFixed(0),
                     child: Padding(padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: Container(height: v == null ? 3 : 8 + 145 * v / peak,
                         decoration: BoxDecoration(color: v == null ? Colors.grey.shade300 :

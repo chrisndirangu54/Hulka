@@ -37,16 +37,22 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
       type: FileType.custom,
       allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
     );
-    if (picked == null || picked.isEmpty) return;
+    if (picked.isEmpty) return;
     final file = picked.single;
-    if (file.bytes == null || file.size > 10 * 1024 * 1024) {
-      setState(() => status = 'Select a document smaller than 10 MB.');
+    final fileSize = file.lengthSync() ?? await file.length();
+    if (fileSize <= 0 || fileSize > 10 * 1024 * 1024) {
+      if (mounted) setState(() => status = 'Select a readable document smaller than 10 MB.');
       return;
     }
+    if (!mounted) return;
     setState(() { busy = true; status = null; });
     try {
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
+        throw const FormatException('Invalid file size.');
+      }
       final ref = FirebaseStorage.instance.ref('patients/$id/consultations/${const Uuid().v4()}/document');
-      await ref.putData(file.bytes!, SettableMetadata(
+      await ref.putData(bytes, SettableMetadata(
         contentType: file.extension?.toLowerCase() == 'pdf'
           ? 'application/pdf'
           : file.extension?.toLowerCase() == 'png' ? 'image/png' : 'image/jpeg',
@@ -102,13 +108,19 @@ class _PatientRecordsScreenState extends State<PatientRecordsScreen> {
       type: FileType.custom, allowedExtensions: ['json']);
     if (picked == null || picked.isEmpty) return;
     final file = picked.single;
-    if (file.bytes == null || file.size > 1024 * 1024) {
-      setState(() => status = 'Select a hospital JSON export smaller than 1 MB.');
+    final fileSize = file.lengthSync() ?? await file.length();
+    if (fileSize <= 0 || fileSize > 1024 * 1024) {
+      if (mounted) setState(() => status = 'Select a readable hospital JSON export smaller than 1 MB.');
       return;
     }
+    if (!mounted) return;
     setState(() { busy = true; status = null; });
     try {
-      final payload = jsonDecode(utf8.decode(file.bytes!));
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty || bytes.length > 1024 * 1024) {
+        throw const FormatException('Invalid export size.');
+      }
+      final payload = jsonDecode(utf8.decode(bytes));
       if (payload is! Map<String, dynamic> ||
           payload['schema'] != 'hulka.hospital-history.v1' ||
           payload['source'] != 'TeknTandao Workspace' ||

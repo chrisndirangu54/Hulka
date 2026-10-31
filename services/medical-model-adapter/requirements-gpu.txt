@@ -1,0 +1,4 @@
+transformers>=4.50,<5
+torch>=2.5,<3
+accelerate>=1,<2
+pillow>=11,<13

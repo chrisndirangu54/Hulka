@@ -110,4 +110,30 @@ class HulkaFunctions {
   ) async {
     await _call('verifyProviderAccount', payload);
   }
+  Future<Map<String, dynamic>> requestLabIntelligenceReview(String patientId, String resultId) =>
+      _call('requestLabIntelligenceReview', {'patientId': patientId, 'resultId': resultId});
+
+  Future<Map<String, dynamic>> submitSurveillanceSignal(Map<String, Object?> payload) =>
+      _call('submitSurveillanceSignal', payload);
+
+  Future<Map<String, dynamic>> registerHulkaTrainingProposal(Map<String, Object?> payload) =>
+      _call('registerHulkaTrainingProposal', payload);
+  Future<Map<String, dynamic>> submitClinicalInsight(Map<String, Object?> payload) =>
+      _call('submitClinicalInsight', payload);
+
+  Future<Map<String, dynamic>> listClinicalInsights(String patientId) =>
+      _call('listClinicalInsights', {'patientId': patientId});
+
+  Future<Map<String, dynamic>> registerClinicalDataset(Map<String, Object?> payload) =>
+      _call('registerClinicalDataset', payload);
+  Future<Map<String, dynamic>> clinicianCopilot(Map<String, Object?> payload) =>
+      _call('clinicianCopilot', payload);
+  Future<Map<String, dynamic>> registerPublicHealthBulletin(Map<String, Object?> payload) =>
+      _call('registerPublicHealthBulletin', payload);
+
+  Future<Map<String, dynamic>> listApprovedPublicHealthBulletins() =>
+      _call('listApprovedPublicHealthBulletins', const {});
+
+  Future<Map<String, dynamic>> searchReviewedEvidence(String query) =>
+      _call('searchReviewedEvidence', {'query': query});
 }
