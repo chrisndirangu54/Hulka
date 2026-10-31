@@ -102,6 +102,22 @@ async request => {
     }
     evidence.push({title:record.title.slice(0,150),url:record.url.slice(0,500)});
   }
+  // Prevent raw personal identifiers from being sent to a research gateway.
+  // This is a conservative blocklist, not a substitute for privacy review.
+  const unsafeMarkers = [
+    /\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b/i,
+    /\\b(?:\\+?254|0)[17]\\d{8}\\b/,
+    /\\b(?:national\\s+id|passport\\s+number|nhif\\s+number|patient\\s+id)\\s*[:#-]\\s*[A-Za-z0-9-]+/i
+  ];
+  if (unsafeMarkers.some(pattern => pattern.test(question))) {
+    throw new HttpsError("invalid-argument",
+      "Remove direct patient identifiers before requesting research assistance");
+  }
+  // Clinical evidence is required for assertions that purport to review published findings.
+  if (task === "evidence_review" && evidence.length === 0) {
+    throw new HttpsError("failed-precondition",
+      "Select at least one independently approved reference");
+  }
   const modelUrl = endpoint.value();
   const apiToken = token.value();
   if (!modelUrl || !apiToken || !isSafeEndpoint(modelUrl)) {
