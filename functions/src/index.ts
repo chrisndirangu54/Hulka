@@ -964,6 +964,6 @@ export { submitClinicalInsight, registerClinicalDataset, listClinicalInsights } 
 
 export { clinicianCopilot } from "./clinician_copilot";
 
-export { registerReviewedEvidence, searchReviewedEvidence } from './evidence_catalog';
+export { registerReviewedEvidence, searchReviewedEvidence, verifyEvidenceSource, approveClinicalEvidence } from './evidence_catalog';
 
 export { registerPublicHealthBulletin, listApprovedPublicHealthBulletins } from "./public_health_bulletins";
