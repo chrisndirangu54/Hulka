@@ -17,7 +17,7 @@
 - Clinical intelligence: summarize records only after verified consent, retrieve clinician-approved guidance, and highlight critical findings for review.
 - Laboratory intelligence: schema-aware results extraction, reference-range handling, quality flags, organism/culture data and antibiotic susceptibility interpretation with laboratory oversight; independent validation required for image or AST predictors.
 - Preventive care: deploy clinically reviewed WHO, Kenya Ministry of Health and other source-specific rule packs with provenance, expiration and human approval; connect source-quality-tagged wearable streams.
-- Public health: vetted partner feeds, deduplication, geospatial and temporal aggregation with suppression thresholds, human authorization, and approved Jumuisha AI / Regen Insight interoperation.
+- Public health: vetted partner feeds, deduplication, geospatial and temporal aggregation with suppression thresholds, human authorization, and approved Jumuisha AI interoperation only.
 - Research: specialist-only microbiome/genomics workflows, controlled access, de-identification and approved usage policies.
 
 ## Hulka training pipeline (not yet operational)
