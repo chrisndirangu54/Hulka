@@ -7,6 +7,7 @@ import '../admin/admin_screen.dart';
 import '../ai/ai_copilot_screen.dart';
 import '../analytics/analytics_screen.dart';
 import '../clinical/clinician_screen.dart';
+import '../clinical/clinical_intelligence_screen.dart';
 import '../consent/consent_screen.dart';
 import '../emergency/emergency_screen.dart';
 import '../hospital/hospital_screen.dart';
@@ -54,6 +55,7 @@ class _AppShellState extends State<AppShell> {
       const _Destination('Wearables', Icons.watch_outlined, WearablesScreen()),
       const _Destination('Activity insights', Icons.directions_run_outlined, ActivityInsightsScreen()),
       const _Destination('AI Copilot', Icons.auto_awesome_outlined, AiCopilotScreen()),
+      const _Destination('Clinical intelligence', Icons.biotech_outlined, ClinicalIntelligenceScreen()),
       const _Destination('Care network', Icons.local_hospital_outlined, HospitalDirectoryScreen()),
       const _Destination('Emergency', Icons.emergency_outlined, EmergencyScreen()),
       const _Destination('Consent', Icons.verified_user_outlined, ConsentScreen()),
