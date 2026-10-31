@@ -118,6 +118,12 @@ async request => {
     throw new HttpsError("failed-precondition",
       "Select at least one independently approved reference");
   }
+  const modelUrl = endpoint.value();
+  const apiToken = token.value();
+  if (!modelUrl || !apiToken || !isSafeEndpoint(modelUrl)) {
+    return {configured:false, clinicianReviewRequired:true, model:MODELS[modelId],
+      message:"No approved Hulka model gateway configured. No inference performed."};
+  }
   // Per-clinician fixed-window quota: prevents accidental bulk inference and
   // excessive requests. This is not a substitute for service-wide cost limits.
   const windowStart = Math.floor(Date.now() / 3600000);
@@ -132,12 +138,6 @@ async request => {
     tx.set(quotaRef, {userId, windowStart, count: count + 1,
       expiresAt: new Date((windowStart + 2) * 3600000)}, {merge:true});
   });
-  const modelUrl = endpoint.value();
-  const apiToken = token.value();
-  if (!modelUrl || !apiToken || !isSafeEndpoint(modelUrl)) {
-    return {configured:false, clinicianReviewRequired:true, model:MODELS[modelId],
-      message:"No approved Hulka model gateway configured. No inference performed."};
-  }
   // Never send the entire patient chart. Do not include patient name, address or identifiers.
   // Clinician question may still contain PHI: gateway approval and lawful data transfer required.
   const payload = {
