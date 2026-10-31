@@ -98,7 +98,7 @@ export const registerHulkaTrainingProposal = onCall(async request => {
     throw new HttpsError("invalid-argument",
       "modelPurpose, datasetReference and governanceApprovalId are required");
   }
-  if (/^patients\/|^labResults\/|^gs:\/\//i.test(datasetReference)) {
+  if (["patients/", "labResults/", "gs://"].some(prefix => datasetReference.startsWith(prefix))) {
     throw new HttpsError("invalid-argument", "Raw clinical records are not training datasets");
   }
   const ref = await db.collection("hulkaTrainingProposals").add({
