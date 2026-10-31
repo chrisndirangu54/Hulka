@@ -963,3 +963,5 @@ export { requestLabIntelligenceReview, submitSurveillanceSignal, registerHulkaTr
 export { submitClinicalInsight, registerClinicalDataset, listClinicalInsights } from "./clinical_domains";
 
 export { clinicianCopilot } from "./clinician_copilot";
+
+export { registerReviewedEvidence, searchReviewedEvidence } from './evidence_catalog';
