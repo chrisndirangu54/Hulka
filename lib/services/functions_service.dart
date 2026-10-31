@@ -128,4 +128,12 @@ class HulkaFunctions {
       _call('registerClinicalDataset', payload);
   Future<Map<String, dynamic>> clinicianCopilot(Map<String, Object?> payload) =>
       _call('clinicianCopilot', payload);
+  Future<Map<String, dynamic>> registerPublicHealthBulletin(Map<String, Object?> payload) =>
+      _call('registerPublicHealthBulletin', payload);
+
+  Future<Map<String, dynamic>> listApprovedPublicHealthBulletins() =>
+      _call('listApprovedPublicHealthBulletins', const {});
+
+  Future<Map<String, dynamic>> searchReviewedEvidence(String query) =>
+      _call('searchReviewedEvidence', {'query': query});
 }
