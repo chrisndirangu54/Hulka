@@ -25,5 +25,5 @@ POST `/v1/clinical-assist`, Bearer secret, request: `{modelId, task, question, e
 2. Build an evidence-retrieval system using licensed clinical guidance with versioned documents and human-reviewed references. WHO SMART: https://www.who.int/teams/digital-health-and-innovation/smart-guidelines/
 3. Complete threat model: PHI redaction, prompt-injection defenses, abuse limits, audit retention, patient-scoped authorization, key rotation and hosting agreements.
 4. Evaluate differential-review and summarization performance on independently reviewed local cases, measure omissions, unsupported claims and unsafe suggestions, with clinician oversight.
-5. Integrate authenticated labs, microbiology images, population-health feeds, Jumuisha AI and Regen Insight using authorized agreements. No invented measurements.
+5. Integrate authenticated labs, microbiology images, population-health feeds, Jumuisha AI only using authorized agreements. No invented measurements.
 6. Verify CI, Firebase emulator security tests, Flutter tests, and Kenya-specific clinical/regulatory requirements before production.
